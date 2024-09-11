@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  server:
+    build: .
+    volumes:
+      - .:/app
+    working_dir: /app
+    ports:
+      - 8080:8080
+    command: >
+     sh -c "mvn clean install &&
+     cd server &&
+     mvn exec:java -Dexec.args='8080 0'"
+  
+  client:
+    build: .
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: >
+     sh -c "mvn clean install &&
+     cd client &&
+     mvn exec:java"
+    tty: true
+    stdin_open: true

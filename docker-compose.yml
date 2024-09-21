@@ -9,8 +9,4 @@ services:
     stdin_open: true
     tty: true
     container_name: dad
-    command: >
-      bash -c '
-      mvn clean install &&
-      cd server &&
-      mvn exec:java -Dexec.args="8080 0"'
+    command: ./run-servers.sh

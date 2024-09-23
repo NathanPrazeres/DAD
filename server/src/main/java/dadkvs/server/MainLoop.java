@@ -39,6 +39,39 @@ public class MainLoop implements Runnable {
 			} catch (InterruptedException e) {
 			}
 		}
+
+		// Debug mode based behavior
+		// NOTE: eventually move this to its own class probably
+		switch (server_state.debug_mode) {
+			case 0:
+				// Normal mode
+				System.out.println("Debug mode 0: Normal mode.");
+				break;
+			case 1:
+				// Crash the server
+				System.out.println("Debug mode 1: Crash the server.");
+				break;
+			case 2:
+				// Freeze the server
+				System.out.println("Debug mode 2: Freeze the server.");
+				break;
+			case 3:
+				// Un-freeze the server
+				System.out.println("Debug mode 3: Un-freeze the server.");
+				break;
+			case 4:
+				// Slow mode on (insert random delay between request processing)
+				System.out.println("Debug mode 4: Slow mode on");
+				break;
+			case 5:
+				// Slow mode off (remove random delay)
+				System.out.println("Debug mode 5: Slow mode off");
+				break;
+			default:
+				System.out.println("Unknown debug mode: " + server_state.debug_mode);
+				break;
+		}
+
 		System.out.println("Main loop do work finish");
 	}
 

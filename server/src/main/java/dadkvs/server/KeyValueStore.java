@@ -3,12 +3,34 @@ package dadkvs.server;
 public class KeyValueStore {
 	private int size;
 	private VersionedValue[] values;
+	private int delay = 0;
 
 	public KeyValueStore(int n_entries) {
 		this.size = n_entries;
 		this.values = new VersionedValue[n_entries];
 		for (int i = 0; i < n_entries; i++) {
 			this.values[i] = new VersionedValue(0, 0);
+		}
+	}
+
+	public void enableDelay() {
+		delay = 5;
+	}
+
+	public void disableDelay() {
+		delay = 0;
+	}
+
+	public void tryWait(int reqid) {
+		if (this.delay <= 0 || reqid % 100 == 0) {
+			// If reqid is a multiple of 100 that means that the request was sent by a console
+			return;
+		}
+		try {
+			// this.delay is the median number of milliseconds the server will delay
+			Thread.sleep((int) ((Math.random() + 0.5) * this.delay * 1000));
+		} catch (InterruptedException e) {
+			e.printStackTrace();
 		}
 	}
 

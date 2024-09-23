@@ -23,6 +23,9 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
 		int reqid = request.getReqid();
 		int key = request.getKey();
+
+		this.server_state.store.tryWait(reqid);
+
 		VersionedValue vv = this.server_state.store.read(key);
 
 		DadkvsMain.ReadReply response = DadkvsMain.ReadReply.newBuilder()
@@ -48,6 +51,8 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		// for debug purposes
 		System.out.println("reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2
 				+ " wk " + writekey + " writeval " + writeval);
+
+		this.server_state.store.tryWait(reqid);
 
 		this.timestamp++;
 		TransactionRecord txrecord = new TransactionRecord(key1, version1, key2, version2, writekey, writeval,

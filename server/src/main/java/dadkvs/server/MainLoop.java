@@ -50,6 +50,8 @@ public class MainLoop implements Runnable {
 			case 1:
 				// Crash the server
 				System.out.println("Debug mode 1: Crash the server.");
+				// just brute forcing this for now
+				System.exit(0);
 				break;
 			case 2:
 				// Freeze the server

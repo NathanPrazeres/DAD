@@ -45,7 +45,7 @@ public class DadkvsConsoleServiceImpl extends DadkvsConsoleServiceGrpc.DadkvsCon
 
 		this.server_state.debug_mode = request.getMode();
 		if (this.server_state.debug_mode == 4) {
-			this.server_state.store.enableDelay();
+			this.server_state.delay = true;
 		}
 		this.server_state.main_loop.wakeup();
 

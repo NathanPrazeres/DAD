@@ -13,27 +13,6 @@ public class KeyValueStore {
 		}
 	}
 
-	public void enableDelay() {
-		delay = 5;
-	}
-
-	public void disableDelay() {
-		delay = 0;
-	}
-
-	public void tryWait(int reqid) {
-		if (this.delay <= 0 || reqid % 100 == 0) {
-			// If reqid is a multiple of 100 that means that the request was sent by a console
-			return;
-		}
-		try {
-			// this.delay is the median number of milliseconds the server will delay
-			Thread.sleep((int) ((Math.random() + 0.5) * this.delay * 1000));
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-	}
-
 	synchronized public VersionedValue read(int k) {
 		if (k < size) {
 			return values[k];

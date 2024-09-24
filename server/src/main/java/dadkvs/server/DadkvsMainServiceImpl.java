@@ -11,9 +11,23 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 	DadkvsServerState server_state;
 	int timestamp;
 
+	static final int SERVER_DELAY = 5000; // 5 seconds
+
 	public DadkvsMainServiceImpl(DadkvsServerState state) {
 		this.server_state = state;
 		this.timestamp = 0;
+	}
+
+	public void tryWait(int reqid) {
+		if (!this.server_state.delay || reqid % 100 == 0) {
+			// If reqid is a multiple of 100 that means that the request was sent by a console
+			return;
+		}
+		try {
+			Thread.sleep((int) (SERVER_DELAY * (Math.random() + 0.5))); // Median is SERVER_DELAY
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 	}
 
 	@Override
@@ -24,7 +38,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		int reqid = request.getReqid();
 		int key = request.getKey();
 
-		this.server_state.store.tryWait(reqid);
+		tryWait(reqid);
 
 		VersionedValue vv = this.server_state.store.read(key);
 
@@ -52,7 +66,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		System.out.println("reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2
 				+ " wk " + writekey + " writeval " + writeval);
 
-		this.server_state.store.tryWait(reqid);
+		tryWait(reqid);
 
 		this.timestamp++;
 		TransactionRecord txrecord = new TransactionRecord(key1, version1, key2, version2, writekey, writeval,

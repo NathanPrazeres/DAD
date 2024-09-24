@@ -9,7 +9,7 @@ public class DadkvsServerState {
 	KeyValueStore store;
 	MainLoop main_loop;
 	Thread main_loop_worker;
-	boolean delay;
+	boolean slow_mode;
 
 	public DadkvsServerState(int kv_size, int port, int myself) {
 		base_port = port;
@@ -21,6 +21,6 @@ public class DadkvsServerState {
 		main_loop = new MainLoop(this);
 		main_loop_worker = new Thread(main_loop);
 		main_loop_worker.start();
-		delay = false;
+		slow_mode = false;
 	}
 }

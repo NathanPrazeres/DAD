@@ -64,10 +64,12 @@ public class MainLoop implements Runnable {
 			case 4:
 				// Slow mode on (insert random delay between request processing)
 				System.out.println("Debug mode 4: Slow mode on");
+				this.server_state.slow_mode = true;
 				break;
-			case 5:
+				case 5:
 				// Slow mode off (remove random delay)
 				System.out.println("Debug mode 5: Slow mode off");
+				this.server_state.slow_mode = false;
 				break;
 			default:
 				System.out.println("Unknown debug mode: " + server_state.debug_mode);

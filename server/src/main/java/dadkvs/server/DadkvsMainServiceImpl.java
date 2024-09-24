@@ -19,7 +19,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 	}
 
 	public void tryWait(int reqid) {
-		if (!this.server_state.delay || reqid % 100 == 0) {
+		if (!this.server_state.slow_mode || reqid % 100 == 0) {
 			// If reqid is a multiple of 100 that means that the request was sent by a console
 			return;
 		}

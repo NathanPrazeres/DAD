@@ -56,17 +56,19 @@ public class MainLoop implements Runnable {
 			case 2:
 				// Freeze the server
 				System.out.println("Debug mode 2: Freeze the server.");
+				this.server_state.frozen = true;
 				break;
 			case 3:
 				// Un-freeze the server
 				System.out.println("Debug mode 3: Un-freeze the server.");
+				this.server_state.frozen = false;
 				break;
 			case 4:
 				// Slow mode on (insert random delay between request processing)
 				System.out.println("Debug mode 4: Slow mode on");
 				this.server_state.slow_mode = true;
 				break;
-				case 5:
+			case 5:
 				// Slow mode off (remove random delay)
 				System.out.println("Debug mode 5: Slow mode off");
 				this.server_state.slow_mode = false;

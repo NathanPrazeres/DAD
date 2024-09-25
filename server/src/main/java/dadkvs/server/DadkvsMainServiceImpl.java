@@ -18,11 +18,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		this.timestamp = 0;
 	}
 
-	public void tryWait(int reqid) {
-		if (!this.server_state.slow_mode || reqid % 100 == 0) {
-			// If reqid is a multiple of 100 that means that the request was sent by a console
-			return;
-		}
+	public void tryWait() {
 		try {
 			Thread.sleep((int) (SERVER_DELAY * (Math.random() + 0.5))); // Median is SERVER_DELAY
 		} catch (InterruptedException e) {
@@ -38,7 +34,14 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		int reqid = request.getReqid();
 		int key = request.getKey();
 
-		tryWait(reqid);
+		if (reqid % 100 != 0) { // NOTE: its not a console request
+			if (this.server_state.frozen) {
+				System.out.println("Server is frozen. Blocking all client requests.");
+				return;
+			} else if (this.server_state.slow_mode) {
+				tryWait();
+			}
+		}
 
 		VersionedValue vv = this.server_state.store.read(key);
 
@@ -62,11 +65,18 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		int writekey = request.getWritekey();
 		int writeval = request.getWriteval();
 
+		if (reqid % 100 != 0) { // NOTE: its not a console request
+			if (this.server_state.frozen) {
+				System.out.println("Server is frozen. Blocking all client requests.");
+				return;
+			} else if (this.server_state.slow_mode) {
+				tryWait();
+			}
+		}
+
 		// for debug purposes
 		System.out.println("reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2
 				+ " wk " + writekey + " writeval " + writeval);
-
-		tryWait(reqid);
 
 		this.timestamp++;
 		TransactionRecord txrecord = new TransactionRecord(key1, version1, key2, version2, writekey, writeval,

@@ -137,7 +137,6 @@ public class DadkvsConsoleClient {
 
 							DadkvsConsole.SetDebugRequest.Builder setdebug_request = DadkvsConsole.SetDebugRequest.newBuilder();
 							ArrayList<DadkvsConsole.SetDebugReply> setdebug_responses = new ArrayList<DadkvsConsole.SetDebugReply>();
-							;
 							GenericResponseCollector<DadkvsConsole.SetDebugReply> setdebug_collector = new GenericResponseCollector<DadkvsConsole.SetDebugReply>(
 									setdebug_responses, 1);
 							CollectorStreamObserver<DadkvsConsole.SetDebugReply> setdebug_observer = new CollectorStreamObserver<DadkvsConsole.SetDebugReply>(
@@ -152,10 +151,10 @@ public class DadkvsConsoleClient {
 							} else
 								System.out.println("no reply received");
 						} catch (NumberFormatException e) {
-							System.out.println("usage: leader on/off replica");
+							System.out.println("usage: debug mode replica");
 						}
 					} else {
-						System.out.println("usage: leader on/off replica");
+						System.out.println("usage: debug mode replica");
 					}
 					break;
 				case "reconfig":
@@ -238,7 +237,7 @@ public class DadkvsConsoleClient {
 							System.out.println("usage: reconfig configuration");
 						}
 					} else {
-						System.out.println("usage: leader on/off replica");
+						System.out.println("usage: reconfig configuration");
 					}
 					break;
 				case "exit":

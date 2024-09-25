@@ -7,7 +7,6 @@ import dadkvs.DadkvsMainServiceGrpc;
 import io.grpc.stub.StreamObserver;
 
 public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServiceImplBase {
-
 	DadkvsServerState server_state;
 	int timestamp;
 
@@ -44,7 +43,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		}
 
 		VersionedValue vv = this.server_state.store.read(key);
-
+		server_state.nextInLine();
 		DadkvsMain.ReadReply response = DadkvsMain.ReadReply.newBuilder()
 				.setReqid(reqid).setValue(vv.getValue()).setTimestamp(vv.getVersion()).build();
 
@@ -82,6 +81,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		TransactionRecord txrecord = new TransactionRecord(key1, version1, key2, version2, writekey, writeval,
 				this.timestamp);
 		boolean result = this.server_state.store.commit(txrecord);
+		server_state.nextInLine();
 
 		// for debug purposes
 		System.out.println("Result is ready for request with reqid " + reqid);

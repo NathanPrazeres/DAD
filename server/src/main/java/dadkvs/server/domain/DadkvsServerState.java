@@ -12,6 +12,9 @@ public class DadkvsServerState {
 	boolean slow_mode;
 	boolean frozen;
 
+	private Sequencer _sequencer = new Sequencer();
+	private Queue _queue = new Queue();
+
 	public DadkvsServerState(int kv_size, int port, int myself) {
 		base_port = port;
 		my_id = myself;
@@ -24,5 +27,17 @@ public class DadkvsServerState {
 		main_loop_worker.start();
 		slow_mode = false;
 		frozen = false;
+	}
+
+	public int getSequencerNumber() {
+		return _sequencer.getSeqNumber();
+	}
+
+	public void waitInLine(int queueNumber) {
+		_queue.waitForQueueNumber(queueNumber);
+	}
+
+	public void nextInLine() {
+		_queue.incrementQueueNumber();
 	}
 }

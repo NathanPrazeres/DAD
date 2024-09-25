@@ -77,8 +77,6 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		System.out.println("reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2
 				+ " wk " + writekey + " writeval " + writeval);
 
-		tryWait(reqid);
-
 		if (server_state.i_am_leader) {
 			// if leader, send fast paxos request with sequence number as epoch
 			int seqNumber = server_state.getSequencerNumber();

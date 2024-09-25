@@ -10,6 +10,9 @@ public class DadkvsServerState {
 	MainLoop main_loop;
 	Thread main_loop_worker;
 
+	private Sequencer _sequencer = new Sequencer();
+	private Queue _queue = new Queue();
+
 	public DadkvsServerState(int kv_size, int port, int myself) {
 		base_port = port;
 		my_id = myself;
@@ -20,5 +23,17 @@ public class DadkvsServerState {
 		main_loop = new MainLoop(this);
 		main_loop_worker = new Thread(main_loop);
 		main_loop_worker.start();
+	}
+
+	public int getSequencerNumber() {
+		return _sequencer.getSeqNumber();
+	}
+
+	public void waitInLine(int queueNumber) {
+		_queue.waitForQueueNumber(queueNumber);
+	}
+
+	public void nextInLine() {
+		_queue.incrementQueueNumber();
 	}
 }

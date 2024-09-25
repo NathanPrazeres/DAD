@@ -1,36 +1,24 @@
-import java.util.concurrent.locks.ReentrantLock;
+package dadkvs.server;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
 
 public class Sequencer {
     private int _seqNumber = 0;
     private final ReadWriteLock  _seqLock = new ReentrantReadWriteLock();
-    private final Lock _waitSeqLock = new ReentrantLock();
-    private final Condition _waitSeqCondition = _waitSeqLock.newCondition();
 
-    public void waitForSeqNumber(int seqNumber) {
+    public int getSeqNumber() {
+        int seqNumber;
         _seqLock.readLock().lock();
         try {
-          while (seqNumber != _seqNumber) {
-            _seqLock.readLock().unlock();
-            _waitSeqLock.lock();
-            try {
-                _waitSeqCondition.await();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            } finally {
-                _waitSeqLock.unlock();
-            }
-            _seqLock.readLock().lock();
-          }
+            seqNumber = _seqNumber;
         } finally {
             _seqLock.readLock().unlock();
         }
-      }
+        incrementSeqNumber();
+        return seqNumber;
+    }
 
-    private void incrementSequenceNumber() {
+    private void incrementSeqNumber() {
         _seqLock.writeLock().lock();
         try {
             _seqNumber++;
@@ -39,12 +27,6 @@ public class Sequencer {
             }
         } finally {
             _seqLock.writeLock().unlock();
-        }
-        _waitSeqLock.lock();
-        try {
-            _waitSeqCondition.signalAll();
-        } finally {
-            _waitSeqLock.unlock();
         }
     }
 }

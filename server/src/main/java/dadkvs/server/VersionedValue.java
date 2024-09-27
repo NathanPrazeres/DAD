@@ -1,4 +1,4 @@
-package dadkvs.server.domain;
+package dadkvs.server;
 
 public class VersionedValue {
 	private int value;

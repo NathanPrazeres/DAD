@@ -1,4 +1,4 @@
-package dadkvs.server.domain;
+package dadkvs.server;
 
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReadWriteLock;

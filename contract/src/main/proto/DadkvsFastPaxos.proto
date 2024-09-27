@@ -12,6 +12,6 @@ message FastPaxosRequest {
 
 message FastPaxosReply {}
 
-service DadkvsPaxosService {
+service DadkvsFastPaxosService {
   rpc fastpaxos(FastPaxosRequest) returns (FastPaxosReply);
 }

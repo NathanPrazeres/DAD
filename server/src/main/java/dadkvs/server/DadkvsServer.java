@@ -5,8 +5,7 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 
 import dadkvs.DadkvsMain;
-import dadkvs.DadkvsMainServiceGrpc;
-import dadkvs.server.domain.DadkvsServerState;
+import dadkvs.DadkvsFastPaxosServiceGrpc;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -62,11 +61,10 @@ public class DadkvsServer {
 			channels[i] = ManagedChannelBuilder.forTarget(targets[i]).usePlaintext().build();
 		}
 
-		DadkvsFastPaxosServiceGrpc.DadkvsFastPaxosServiceStub[] fast_paxos_async_stubs = new DadkvsFastPaxosServiceGrpc.DadkvsFastPaxosServiceStub[server_state.n_servers]
+		DadkvsFastPaxosServiceGrpc.DadkvsFastPaxosServiceStub[] fast_paxos_async_stubs = new DadkvsFastPaxosServiceGrpc.DadkvsFastPaxosServiceStub[server_state.n_servers];
 
 		for (int i = 0; i < server_state.n_servers; i++) {
-			main_async_stubs[i] = DadkvsMainServiceGrpc.newStub(channels[i]);
-			console_async_stubs[i] = DadkvsConsoleServiceGrpc.newStub(channels[i]);
+			fast_paxos_async_stubs[i] = DadkvsFastPaxosServiceGrpc.newStub(channels[i]);
 		}
 
 		final BindableService service_impl = new DadkvsMainServiceImpl(server_state);

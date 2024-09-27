@@ -42,29 +42,25 @@ public class DadkvsServer {
 
 		port = base_port + my_id;
 
-		// TODO: create stubs to communicate between servers
-		//
-
-		String[] targets = new String[server_state.n_servers];
+		// create stubs to communicate between servers
+		String[] targets = new String[server_state.n_servers - 1];
 		for (int i = 0; i < server_state.n_servers; i++) {
+			if (i == my_id)
+				continue;
 			int target_port = port + i;
 			targets[i] = new String();
 			targets[i] = "localhost:" + target_port;
 			System.out.printf("targets[%d] = %s%n", i, targets[i]);
 		}
 
-		ManagedChannel[] channels = new ManagedChannel[server_state.n_servers];
-		for (int i = 0; i < server_state.n_servers; i++) {
-			if (i == my_id)
-				continue;
+		ManagedChannel[] channels = new ManagedChannel[server_state.n_servers - 1];
+		for (int i = 0; i < server_state.n_servers - 1; i++) {
 			channels[i] = ManagedChannelBuilder.forTarget(targets[i]).usePlaintext().build();
 		}
 
 		DadkvsFastPaxosServiceGrpc.DadkvsFastPaxosServiceStub[] fast_paxos_async_stubs = new DadkvsFastPaxosServiceGrpc.DadkvsFastPaxosServiceStub[server_state.n_servers];
 
-		for (int i = 0; i < server_state.n_servers; i++) {
-			if (i == my_id)
-				continue;
+		for (int i = 0; i < server_state.n_servers - 1; i++) {
 			fast_paxos_async_stubs[i] = DadkvsFastPaxosServiceGrpc.newStub(channels[i]);
 		}
 
@@ -75,6 +71,7 @@ public class DadkvsServer {
 
 		// Create a new server to listen on port.
 		Server server = ServerBuilder.forPort(port).addService(service_impl).addService(console_impl).addService(paxos_impl)
+				.addService(fast_paxos_impl)
 				.build();
 		// Start the server.
 		server.start();

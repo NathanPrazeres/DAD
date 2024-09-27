@@ -21,6 +21,7 @@ public class DadkvsFastPaxosServiceImpl extends DadkvsFastPaxosServiceGrpc.Dadkv
 		System.out.println(request);
 
 		// TODO: send request to all other replicas with the reqId
+		server_state.orderRequest();
 	}
 
 }

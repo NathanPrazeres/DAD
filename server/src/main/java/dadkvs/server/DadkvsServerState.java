@@ -2,7 +2,7 @@ package dadkvs.server;
 
 public class DadkvsServerState {
 	boolean i_am_leader;
-	final int n_servers;
+	int n_servers;
 	int debug_mode;
 	int base_port;
 	int my_id;
@@ -13,8 +13,10 @@ public class DadkvsServerState {
 	boolean slow_mode;
 	boolean frozen;
 
-	private Sequencer _sequencer = new Sequencer();
-	private Queue _queue = new Queue();
+	private Sequencer _sequencer;
+	private Queue _queue;
+	// TODO: possibly add hash table as a backlog to map ids that have not yet been
+	// executed
 
 	public DadkvsServerState(int kv_size, int port, int myself) {
 		base_port = port;
@@ -29,6 +31,9 @@ public class DadkvsServerState {
 		main_loop_worker.start();
 		slow_mode = false;
 		frozen = false;
+
+		_sequencer = new Sequencer();
+		_queue = new Queue();
 	}
 
 	public int getSequencerNumber() {
@@ -44,6 +49,7 @@ public class DadkvsServerState {
 	}
 
 	public void orderRequest(int reqId, int epoch) {
-		// TODO: don't know how to do this :)))))
+		// TODO: if when epoch == nextEpoch, execute, else, wait() until right epoch
+		// nextEpoch should be a variable in server state
 	}
 }

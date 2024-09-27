@@ -1,4 +1,4 @@
-package dadkvs.server.domain;
+package dadkvs.server;
 
 public class DadkvsServerState {
 	boolean i_am_leader;

@@ -1,4 +1,4 @@
-package dadkvs.server.domain;
+package dadkvs.server;
 
 public class TransactionRecord {
 	private int timestamp;

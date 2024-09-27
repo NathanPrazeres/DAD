@@ -42,4 +42,8 @@ public class DadkvsServerState {
 	public void nextInLine() {
 		_queue.incrementQueueNumber();
 	}
+
+	public void orderRequest(int reqId, int epoch) {
+		// TODO: don't know how to do this :)))))
+	}
 }

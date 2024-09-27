@@ -1,7 +1,8 @@
-package dadkvs.server;
+package dadkvs.server.domain;
 
 public class DadkvsServerState {
 	boolean i_am_leader;
+	final int n_servers;
 	int debug_mode;
 	int base_port;
 	int my_id;
@@ -17,6 +18,7 @@ public class DadkvsServerState {
 
 	public DadkvsServerState(int kv_size, int port, int myself) {
 		base_port = port;
+		n_servers = 5;
 		my_id = myself;
 		i_am_leader = false;
 		debug_mode = 0;

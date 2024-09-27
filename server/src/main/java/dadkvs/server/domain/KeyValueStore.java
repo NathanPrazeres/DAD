@@ -1,4 +1,4 @@
-package dadkvs.server;
+package dadkvs.server.domain;
 
 public class KeyValueStore {
 	private int size;

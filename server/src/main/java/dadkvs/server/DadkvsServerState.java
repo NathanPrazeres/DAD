@@ -15,8 +15,6 @@ public class DadkvsServerState {
 
 	private Sequencer _sequencer;
 	private Queue _queue;
-	// TODO: possibly add hash table as a backlog to map ids that have not yet been
-	// executed
 
 	public DadkvsServerState(int kv_size, int port, int myself) {
 		base_port = port;
@@ -48,8 +46,25 @@ public class DadkvsServerState {
 		_queue.incrementQueueNumber();
 	}
 
-	public void orderRequest(int reqId, int epoch) {
-		// TODO: if when epoch == nextEpoch, execute, else, wait() until right epoch
-		// nextEpoch should be a variable in server state
+	public void orderId(int req_id, int epoch) {
+		while (true) {
+			if (epoch == _sequencer.readSeqNumber() + 1) {
+				// TODO: execute transaction, increase sequence number, notify all
+				notifyAll();
+			} else {
+				// TODO: wait until epoch is the next one
+				try {
+					wait();
+				} catch (InterruptedException e) {
+					// do nothing
+				}
+
+			}
+		}
 	}
+
+	public void orderIdRequest(int req_id, int epoch) {
+		// NOTE: currently, the function in DadkvsServer, but probably needs to be moved
+	}
+
 }

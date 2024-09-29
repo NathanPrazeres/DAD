@@ -7,7 +7,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 
 public class Queue {
-	private int _queueNumber = 0;
+	private int _nextSeqNumber = 0;
 	private final ReadWriteLock _queueLock = new ReentrantReadWriteLock();
 	private final Lock _waitQueueLock = new ReentrantLock();
 	private final Condition _waitQueueCondition = _waitQueueLock.newCondition();
@@ -15,7 +15,7 @@ public class Queue {
 	public void waitForQueueNumber(int queueNumber) {
 		_queueLock.readLock().lock();
 		try {
-			while (queueNumber != _queueNumber) {
+			while (queueNumber != _nextSeqNumber) {
 				_queueLock.readLock().unlock();
 				_waitQueueLock.lock();
 				try {
@@ -36,9 +36,9 @@ public class Queue {
 	public void incrementQueueNumber() {
 		_queueLock.writeLock().lock();
 		try {
-			_queueNumber++;
-			if (_queueNumber == Integer.MAX_VALUE) {
-				_queueNumber = 0;
+			_nextSeqNumber++;
+			if (_nextSeqNumber == Integer.MAX_VALUE) {
+				_nextSeqNumber = 0;
 			}
 		} finally {
 			_queueLock.writeLock().unlock();

@@ -7,6 +7,17 @@ public class Sequencer {
 	private int _seqNumber = 0;
 	private final ReadWriteLock _seqLock = new ReentrantReadWriteLock();
 
+	public int readSeqNumber() {
+		int seqNumber;
+		_seqLock.readLock().lock();
+		try {
+			seqNumber = _seqNumber;
+		} finally {
+			_seqLock.readLock().unlock();
+		}
+		return seqNumber;
+	}
+
 	public int getSeqNumber() {
 		int seqNumber;
 		_seqLock.readLock().lock();

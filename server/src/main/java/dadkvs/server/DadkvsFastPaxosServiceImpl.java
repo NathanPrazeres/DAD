@@ -19,9 +19,10 @@ public class DadkvsFastPaxosServiceImpl extends DadkvsFastPaxosServiceGrpc.Dadkv
 			StreamObserver<DadkvsFastPaxos.FastPaxosReply> responseObserver) {
 		// for debug purposes
 		System.out.println(request);
+		System.exit(0);
 
-		// TODO: send request to all other replicas with the reqId
-		server_state.orderRequest(request.getReqId(), request.getEpoch());
+		// locally order request (get better name for function)
+		server_state.orderId(request.getReqId(), request.getEpoch());
 
 		DadkvsFastPaxos.FastPaxosReply response = DadkvsFastPaxos.FastPaxosReply.newBuilder().build();
 

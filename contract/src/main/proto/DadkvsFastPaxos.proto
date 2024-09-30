@@ -1,0 +1,17 @@
+//
+// Protocol buffers definition for Dadkvs Fast Paxos Service
+//
+syntax = "proto3";
+package dadkvs;
+
+message FastPaxosRequest {
+  int32 reqId = 1;
+  int32 epoch =
+      2; // so the other servers know in what order they should execute requests
+}
+
+message FastPaxosReply {}
+
+service DadkvsFastPaxosService {
+  rpc fastpaxos(FastPaxosRequest) returns (FastPaxosReply);
+}

@@ -14,41 +14,75 @@ import dadkvs.util.CollectorStreamObserver;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
+public class MainLoop implements Runnable {
+	DadkvsServerState server_state;
 
-public class MainLoop implements Runnable  {
-    DadkvsServerState server_state;
+	private boolean has_work;
 
-    private boolean has_work;
-    
-    
-    public MainLoop(DadkvsServerState state) {
-	this.server_state = state;
-	this.has_work = false;
-    }
-
-    public void run() {
-	while (true) 
-	    this.doWork();
-    }
-   
-    
-    
-    synchronized public void doWork() {
-	System.out.println("Main loop do work start");
-	this.has_work = false;
-	while (this.has_work == false) {
-	    System.out.println("Main loop do work: waiting");
-	    try {
-		wait ();
-	    }
-	    catch (InterruptedException e) {
-	    }
+	public MainLoop(DadkvsServerState state) {
+		this.server_state = state;
+		this.has_work = false;
 	}
-	System.out.println("Main loop do work finish");
-    }
-    
-    synchronized public void wakeup() {
-	this.has_work = true;
-	notify();    
-    }
+
+	public void run() {
+		while (true)
+			this.doWork();
+	}
+
+	synchronized public void doWork() {
+		System.out.println("Main loop do work start");
+		this.has_work = false;
+		while (this.has_work == false) {
+			System.out.println("Main loop do work: waiting");
+			try {
+				wait();
+			} catch (InterruptedException e) {
+			}
+		}
+
+		// Debug mode based behavior
+		// NOTE: eventually move this to its own class probably
+		switch (server_state.debug_mode) {
+			case 0:
+				// Normal mode
+				System.out.println("Debug mode 0: Normal mode.");
+				break;
+			case 1:
+				// Crash the server
+				System.out.println("Debug mode 1: Crash the server.");
+				// just brute forcing this for now
+				System.exit(0);
+				break;
+			case 2:
+				// Freeze the server
+				System.out.println("Debug mode 2: Freeze the server.");
+				this.server_state.frozen = true;
+				break;
+			case 3:
+				// Un-freeze the server
+				System.out.println("Debug mode 3: Un-freeze the server.");
+				this.server_state.frozen = false;
+				break;
+			case 4:
+				// Slow mode on (insert random delay between request processing)
+				System.out.println("Debug mode 4: Slow mode on");
+				this.server_state.slow_mode = true;
+				break;
+			case 5:
+				// Slow mode off (remove random delay)
+				System.out.println("Debug mode 5: Slow mode off");
+				this.server_state.slow_mode = false;
+				break;
+			default:
+				System.out.println("Unknown debug mode: " + server_state.debug_mode);
+				break;
+		}
+
+		System.out.println("Main loop do work finish");
+	}
+
+	synchronized public void wakeup() {
+		this.has_work = true;
+		notify();
+	}
 }

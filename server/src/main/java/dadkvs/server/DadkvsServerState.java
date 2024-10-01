@@ -10,6 +10,8 @@ public class DadkvsServerState {
 	KeyValueStore store;
 	MainLoop main_loop;
 	Thread main_loop_worker;
+	boolean slow_mode;
+	boolean frozen;
 
 	private Sequencer _sequencer;
 	private Queue _queue;
@@ -25,6 +27,8 @@ public class DadkvsServerState {
 		main_loop = new MainLoop(this);
 		main_loop_worker = new Thread(main_loop);
 		main_loop_worker.start();
+		slow_mode = false;
+		frozen = false;
 
 		_sequencer = new Sequencer();
 		_queue = new Queue();

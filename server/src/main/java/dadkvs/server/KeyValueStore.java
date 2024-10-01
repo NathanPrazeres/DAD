@@ -3,6 +3,7 @@ package dadkvs.server;
 public class KeyValueStore {
 	private int size;
 	private VersionedValue[] values;
+	private int delay = 0;
 
 	public KeyValueStore(int n_entries) {
 		this.size = n_entries;

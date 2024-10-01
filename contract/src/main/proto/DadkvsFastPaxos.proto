@@ -6,7 +6,7 @@ package dadkvs;
 
 message FastPaxosRequest {
   int32 reqId = 1;
-  int32 epoch =
+  int32 seqNum =
       2; // so the other servers know in what order they should execute requests
 }
 

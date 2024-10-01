@@ -5,34 +5,42 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class FastPaxosQueue {
-    private final ArrayList<Integer> _waitingRequests = new ArrayList<>();
-	private final ReadWriteLock _queueLock = new ReentrantReadWriteLock();
+    private ConcurrentHashMap<Integer, Integer> _requestMap  = new ConcurrentHashMap<>();
 	private final Lock _waitQueueLock = new ReentrantLock();
 	private final Condition _waitQueueCondition = _waitQueueLock.newCondition();
 
-    public int getSeqFromLeader(int reqid) {
-        _queueLock.readLock().lock();
-		int queueNumber = 0; // FIXME: THIS IS VERY INCORRECT
-		int _nextSeqNumber = 0; // FIXME: THIS IS VERY INCORRECT
-		try {
-			while (queueNumber != _nextSeqNumber) {
-				_queueLock.readLock().unlock();
-				_waitQueueLock.lock();
-				try {
-					_waitQueueCondition.await();
-				} catch (InterruptedException e) {
-					throw new RuntimeException(e);
-				} finally {
-					_waitQueueLock.unlock();
+    public int getSequenceNumber(int reqid) {
+		Integer seqNumber = _requestMap.get(reqid);
+		
+		while (seqNumber == null) {
+			_waitQueueLock.lock();
+			try {
+				while (_requestMap.get(reqid) == null) {
+					try {
+						_waitQueueCondition.await();
+					} catch (InterruptedException e) {
+						throw new RuntimeException(e);
+					}
 				}
-				_queueLock.readLock().lock();
+				seqNumber = _requestMap.get(reqid);
+			} finally {
+				_waitQueueLock.unlock();
 			}
-		} finally {
-			_queueLock.readLock().unlock();
 		}
+		
+		return seqNumber;
+    }
 
-		return queueNumber;
+    public void addRequest(int reqid, int seqNumber) {
+		_requestMap.put(reqid, seqNumber);
+		_waitQueueLock.lock();
+		try {
+			_waitQueueCondition.signalAll();
+		} finally {
+			_waitQueueLock.unlock();
+		}
     }
 }

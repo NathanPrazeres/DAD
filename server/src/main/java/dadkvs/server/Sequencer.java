@@ -18,7 +18,7 @@ public class Sequencer {
 		return seqNumber;
 	}
 
-	public int getSeqNumber() {
+	public int getSequenceNumber() {
 		int seqNumber;
 		_seqLock.readLock().lock();
 		try {

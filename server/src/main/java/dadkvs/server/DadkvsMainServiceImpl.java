@@ -6,18 +6,23 @@ import java.util.ArrayList;
 import dadkvs.DadkvsFastPaxos;
 import dadkvs.DadkvsMain;
 import dadkvs.DadkvsMainServiceGrpc;
+import dadkvs.DadkvsFastPaxosServiceGrpc;
+import dadkvs.util.GenericResponseCollector;
+import dadkvs.util.CollectorStreamObserver;
 
 import io.grpc.stub.StreamObserver;
 
 public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServiceImplBase {
-	DadkvsServerState server_state;
+	private DadkvsServerState server_state;
+	private DadkvsFastPaxosServiceGrpc.DadkvsFastPaxosServiceStub[] _async_stubs;
 	int timestamp;
 
 	static final int SERVER_DELAY = 5000; // 5 seconds
 
-	public DadkvsMainServiceImpl(DadkvsServerState state) {
+	public DadkvsMainServiceImpl(DadkvsServerState state, DadkvsFastPaxosServiceGrpc.DadkvsFastPaxosServiceStub[] async_stubs) {
 		this.server_state = state;
 		this.timestamp = 0;
+		_async_stubs = async_stubs;
 	}
 
 	public void tryWait() {
@@ -83,34 +88,56 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
 		if (server_state.i_am_leader) {
 			seqNumber = server_state.getSequencerNumber();
-			
-			
 		} else {
-			seqNumber = FastPaxosQueue.getSeqFromLeader(reqid);
+			seqNumber = server_state.getSeqFromLeader(reqid);
 		}
 
 		server_state.waitInLine(seqNumber);
 				
 		this.timestamp++;
 		TransactionRecord txrecord = new TransactionRecord(key1, version1, key2, version2, writekey, writeval,
-				this.timestamp);
+			this.timestamp);
 
 		boolean result = this.server_state.store.commit(txrecord);
-
-		if (server_state.i_am_leader) {
-			server_state.nextInLine();
-		}
 
 		// for debug purposes
 		System.out.println("Result is ready to be ordered by leader with reqid " + reqid);
 
-		server_state.orderIdRequest(reqid, seqNumber);
-
 		DadkvsMain.CommitReply response = DadkvsMain.CommitReply.newBuilder()
 				.setReqid(reqid).setAck(result).build();
 
-
 		responseObserver.onNext(response);
 		responseObserver.onCompleted();
+
+		server_state.nextInLine();
+
+		// Send sequence number to other replicas
+		if (server_state.i_am_leader) {
+			doFastPaxos(reqid, seqNumber);
+		}
+	}
+
+	public boolean doFastPaxos(int req_id, int seq_num) {
+		DadkvsFastPaxos.FastPaxosRequest.Builder order_request = DadkvsFastPaxos.FastPaxosRequest.newBuilder();
+
+		order_request.setReqId(req_id)
+				.setSeqNum(seq_num);
+
+		System.out.println("Request ID: " + req_id);
+		System.out.println("Sequence Number: " + seq_num);
+
+		ArrayList<DadkvsFastPaxos.FastPaxosReply> order_responses = new ArrayList<DadkvsFastPaxos.FastPaxosReply>();
+		GenericResponseCollector<DadkvsFastPaxos.FastPaxosReply> order_collector = new GenericResponseCollector<DadkvsFastPaxos.FastPaxosReply>(
+				order_responses, server_state.n_servers - 1);
+		for (int i = 0; i < server_state.n_servers - 1; i++) {
+			CollectorStreamObserver<DadkvsFastPaxos.FastPaxosReply> order_observer = new CollectorStreamObserver<DadkvsFastPaxos.FastPaxosReply>(
+					order_collector);
+			_async_stubs[i].fastPaxos(order_request.build(), order_observer);
+
+		}
+
+		// TODO: handle responses
+
+		return true; // idk??????
 	}
 }

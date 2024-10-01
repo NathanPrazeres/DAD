@@ -51,13 +51,15 @@ public class DadkvsServer {
 
 		// create stubs to communicate between servers
 		String[] targets = new String[server_state.n_servers - 1];
+		int j = 0;
 		for (int i = 0; i < server_state.n_servers; i++) {
 			if (i == my_id)
 				continue;
-			int target_port = port + i;
-			targets[i] = new String();
-			targets[i] = "localhost:" + target_port;
-			System.out.printf("targets[%d] = %s%n", i, targets[i]);
+			int target_port = base_port + i;
+			targets[j] = new String();
+			targets[j] = "localhost:" + target_port;
+			System.out.printf("targets[%d] = %s%n", j, targets[j]);
+			j++;
 		}
 
 		ManagedChannel[] channels = new ManagedChannel[server_state.n_servers - 1];
@@ -71,7 +73,7 @@ public class DadkvsServer {
 			async_stubs[i] = DadkvsFastPaxosServiceGrpc.newStub(channels[i]);
 		}
 
-		final BindableService service_impl = new DadkvsMainServiceImpl(server_state);
+		final BindableService service_impl = new DadkvsMainServiceImpl(server_state, async_stubs);
 		final BindableService console_impl = new DadkvsConsoleServiceImpl(server_state);
 		final BindableService paxos_impl = new DadkvsPaxosServiceImpl(server_state);
 		final BindableService fast_paxos_impl = new DadkvsFastPaxosServiceImpl(server_state);
@@ -87,29 +89,5 @@ public class DadkvsServer {
 
 		// Do not exit the main thread. Wait until server is terminated.
 		server.awaitTermination();
-	}
-
-	public boolean doFastPaxos(int req_id, int seq_num) {
-		DadkvsFastPaxos.FastPaxosRequest.Builder order_request = DadkvsFastPaxos.FastPaxosRequest.newBuilder();
-
-		order_request.setReqId(req_id)
-				.setSeqNum(seq_num);
-
-		System.out.println("Request ID: " + req_id);
-		System.out.println("Sequence Number: " + seq_num);
-
-		ArrayList<DadkvsFastPaxos.FastPaxosReply> order_responses = new ArrayList<DadkvsFastPaxos.FastPaxosReply>();
-		GenericResponseCollector<DadkvsFastPaxos.FastPaxosReply> order_collector = new GenericResponseCollector<DadkvsFastPaxos.FastPaxosReply>(
-				order_responses, server_state.n_servers - 1);
-		for (int i = 0; i < server_state.n_servers - 1; i++) {
-			CollectorStreamObserver<DadkvsFastPaxos.FastPaxosReply> order_observer = new CollectorStreamObserver<DadkvsFastPaxos.FastPaxosReply>(
-					order_collector);
-			async_stubs[i].fastPaxos(order_request.build(), order_observer);
-
-		}
-
-		// TODO: handle responses
-
-		return true; // idk??????
 	}
 }

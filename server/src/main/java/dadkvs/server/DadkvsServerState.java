@@ -13,8 +13,10 @@ public class DadkvsServerState {
 	boolean slow_mode;
 	boolean frozen;
 
-	private Sequencer _sequencer;
+	private Sequencer _sequencer; // Leader
+	private FastPaxosQueue _fastPaxosQueue; // Replica
 	private Queue _queue;
+
 
 	public DadkvsServerState(int kv_size, int port, int myself) {
 		base_port = port;
@@ -32,10 +34,19 @@ public class DadkvsServerState {
 
 		_sequencer = new Sequencer();
 		_queue = new Queue();
+		_fastPaxosQueue = new FastPaxosQueue();
 	}
 
 	public int getSequencerNumber() {
-		return _sequencer.getSeqNumber();
+		return _sequencer.getSequenceNumber();
+	}
+
+	public int getSeqFromLeader(int reqid) {
+		return _fastPaxosQueue.getSequenceNumber(reqid);
+	}
+
+	public void addSeqFromLeader(int reqid, int seqNumber) {
+		_fastPaxosQueue.addRequest(reqid, seqNumber);
 	}
 
 	public void waitInLine(int queueNumber) {
@@ -45,26 +56,4 @@ public class DadkvsServerState {
 	public void nextInLine() {
 		_queue.incrementQueueNumber();
 	}
-
-	public void orderId(int req_id, int epoch) {
-		while (true) {
-			if (epoch == _sequencer.readSeqNumber() + 1) {
-				// TODO: execute transaction, increase sequence number, notify all
-				notifyAll();
-			} else {
-				// TODO: wait until epoch is the next one
-				try {
-					wait();
-				} catch (InterruptedException e) {
-					// do nothing
-				}
-
-			}
-		}
-	}
-
-	public void orderIdRequest(int req_id, int epoch) {
-		// NOTE: currently, the function in DadkvsServer, but probably needs to be moved
-	}
-
 }

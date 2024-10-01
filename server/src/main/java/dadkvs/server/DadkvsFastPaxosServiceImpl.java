@@ -21,8 +21,7 @@ public class DadkvsFastPaxosServiceImpl extends DadkvsFastPaxosServiceGrpc.Dadkv
 		System.out.println(request);
 		System.exit(0);
 
-		// locally order request (get better name for function)
-		server_state.orderId(request.getReqId(), request.getSeqNum());
+		server_state.addSeqFromLeader(request.getReqId(), request.getSeqNum());
 
 		DadkvsFastPaxos.FastPaxosReply response = DadkvsFastPaxos.FastPaxosReply.newBuilder().build();
 

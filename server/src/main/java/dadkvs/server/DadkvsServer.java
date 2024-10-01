@@ -89,14 +89,14 @@ public class DadkvsServer {
 		server.awaitTermination();
 	}
 
-	public boolean doFastPaxos(int req_id, int epoch) {
+	public boolean doFastPaxos(int req_id, int seq_num) {
 		DadkvsFastPaxos.FastPaxosRequest.Builder order_request = DadkvsFastPaxos.FastPaxosRequest.newBuilder();
 
 		order_request.setReqId(req_id)
-				.setEpoch(epoch);
+				.setSeqNum(seq_num);
 
-		System.out.println("Reqid: " + req_id);
-		System.out.println("Epoch: " + epoch);
+		System.out.println("Request ID: " + req_id);
+		System.out.println("Sequence Number: " + seq_num);
 
 		ArrayList<DadkvsFastPaxos.FastPaxosReply> order_responses = new ArrayList<DadkvsFastPaxos.FastPaxosReply>();
 		GenericResponseCollector<DadkvsFastPaxos.FastPaxosReply> order_collector = new GenericResponseCollector<DadkvsFastPaxos.FastPaxosReply>(
@@ -104,7 +104,7 @@ public class DadkvsServer {
 		for (int i = 0; i < server_state.n_servers - 1; i++) {
 			CollectorStreamObserver<DadkvsFastPaxos.FastPaxosReply> order_observer = new CollectorStreamObserver<DadkvsFastPaxos.FastPaxosReply>(
 					order_collector);
-			async_stubs[i].fastpaxos(order_request.build(), order_observer);
+			async_stubs[i].fastPaxos(order_request.build(), order_observer);
 
 		}
 

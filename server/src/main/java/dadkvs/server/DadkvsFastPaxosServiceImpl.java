@@ -15,14 +15,14 @@ public class DadkvsFastPaxosServiceImpl extends DadkvsFastPaxosServiceGrpc.Dadkv
 	}
 
 	@Override
-	public void fastpaxos(DadkvsFastPaxos.FastPaxosRequest request,
+	public void fastPaxos(DadkvsFastPaxos.FastPaxosRequest request,
 			StreamObserver<DadkvsFastPaxos.FastPaxosReply> responseObserver) {
 		// for debug purposes
 		System.out.println(request);
 		System.exit(0);
 
 		// locally order request (get better name for function)
-		server_state.orderId(request.getReqId(), request.getEpoch());
+		server_state.orderId(request.getReqId(), request.getSeqNum());
 
 		DadkvsFastPaxos.FastPaxosReply response = DadkvsFastPaxos.FastPaxosReply.newBuilder().build();
 

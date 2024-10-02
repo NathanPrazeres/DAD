@@ -6,7 +6,7 @@ cd server
 mvn exec:java -Dexec.args="8080 0" &
 
 for i in {1..4}; do
-  sleep 10
+  sleep 5
   mvn exec:java -Dexec.args="8080 $i" &
 done
 

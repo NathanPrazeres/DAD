@@ -18,15 +18,15 @@ public class DadkvsFastPaxosServiceImpl extends DadkvsFastPaxosServiceGrpc.Dadkv
 	public void fastPaxos(DadkvsFastPaxos.FastPaxosRequest request,
 			StreamObserver<DadkvsFastPaxos.FastPaxosReply> responseObserver) {
 		
-		server_state.logSystem.writeLog(request.toString());
+		server_state.logSystem.writeLog("Receiving fastPaxos request");
 		System.out.println(request);
-		System.exit(0);
 
 		server_state.addSeqFromLeader(request.getReqId(), request.getSeqNum());
 
 		DadkvsFastPaxos.FastPaxosReply response = DadkvsFastPaxos.FastPaxosReply.newBuilder().build();
 
 		responseObserver.onNext(response);
+		responseObserver.onCompleted();
 		server_state.logSystem.writeLog("Fast paxos request completed");
 	}
 

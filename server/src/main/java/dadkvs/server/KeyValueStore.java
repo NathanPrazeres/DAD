@@ -3,7 +3,6 @@ package dadkvs.server;
 public class KeyValueStore {
 	private int size;
 	private VersionedValue[] values;
-	private int delay = 0;
 
 	public KeyValueStore(int n_entries) {
 		this.size = n_entries;
@@ -44,5 +43,16 @@ public class KeyValueStore {
 		} else {
 			return false;
 		}
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder vals = new StringBuilder();
+		for (int i = 0; i < size; i++) {
+			if (values[i].getVersion() != 0) {
+				vals.append("Key: " + i + " Value: " + values[i].getValue() + " Version: " + values[i].getVersion() + "\n");
+			}
+		}
+		return vals.toString();
 	}
 }

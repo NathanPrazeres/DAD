@@ -52,7 +52,6 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		}
 
 		VersionedValue vv = this.server_state.store.read(key);
-		server_state.nextInLine();
 		DadkvsMain.ReadReply response = DadkvsMain.ReadReply.newBuilder()
 				.setReqid(reqid).setValue(vv.getValue()).setTimestamp(vv.getVersion()).build();
 
@@ -93,24 +92,23 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		int seqNumber;
 
 		if (server_state.i_am_leader) {
+			server_state.logSystem.writeLog("Getting sequence number");
 			seqNumber = server_state.getSequencerNumber();
 		} else {
 			server_state.logSystem.writeLog("Waiting for leader");
 			seqNumber = server_state.getSeqFromLeader(reqid);
-			server_state.logSystem.writeLog("Received");
 		}
+		server_state.logSystem.writeLog("Got: " + seqNumber);
 
+		server_state.logSystem.writeLog("Waiting for queue");
 		server_state.waitInLine(seqNumber);
+		server_state.logSystem.writeLog("My turn");
 				
 		this.timestamp++;
 		TransactionRecord txrecord = new TransactionRecord(key1, version1, key2, version2, writekey, writeval,
 			this.timestamp);
 
 		boolean result = this.server_state.store.commit(txrecord);
-
-		// for debug purposes
-		System.out.println("Result is ready to be ordered by leader with reqid " + reqid);
-		server_state.logSystem.writeLog("Result is ready to be ordered by leader with reqid " + reqid);
 
 		DadkvsMain.CommitReply response = DadkvsMain.CommitReply.newBuilder()
 				.setReqid(reqid).setAck(result).build();
@@ -125,6 +123,8 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 			server_state.logSystem.writeLog("Sending sequence number to replicas");
 			doFastPaxos(reqid, seqNumber);
 		}
+		server_state.logSystem.writeLog("Tx request completed");
+		server_state.logSystem.writeLog(server_state.store.toString());
 	}
 
 	public boolean doFastPaxos(int req_id, int seq_num) {
@@ -141,13 +141,27 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		ArrayList<DadkvsFastPaxos.FastPaxosReply> order_responses = new ArrayList<DadkvsFastPaxos.FastPaxosReply>();
 		GenericResponseCollector<DadkvsFastPaxos.FastPaxosReply> order_collector = new GenericResponseCollector<DadkvsFastPaxos.FastPaxosReply>(
 				order_responses, server_state.n_servers - 1);
+				
 		for (int i = 0; i < server_state.n_servers - 1; i++) {
 			CollectorStreamObserver<DadkvsFastPaxos.FastPaxosReply> order_observer = new CollectorStreamObserver<DadkvsFastPaxos.FastPaxosReply>(
 					order_collector);
-			_async_stubs[i].fastPaxos(order_request.build(), order_observer);
-
+			try {
+				_async_stubs[i].fastPaxos(order_request.build(), order_observer);
+			} catch (Exception e) {
+				server_state.logSystem.writeLog("Error sending FastPaxos request: " + e.getMessage());
+				System.err.println("Error sending FastPaxos request: " + e.getMessage());
+			}
+		}
+	
+		try {
+			order_collector.waitForTarget(1);
+		} catch (Exception e) {
+			server_state.logSystem.writeLog("Error waiting for FastPaxos responses: " + e.getMessage());
+			System.err.println("Error waiting for FastPaxos responses: " + e.getMessage());
+			return false;
 		}
 
+		
 		return true;
 	}
 }

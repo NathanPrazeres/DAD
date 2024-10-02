@@ -32,7 +32,6 @@ public class LogSystem {
         }
     }
 
-
     public void writeLog(String content) {
         synchronized (lock) {
             try (FileWriter fw = new FileWriter(_logsPath + "/" + _currentSessionPath, true);

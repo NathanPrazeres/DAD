@@ -2,43 +2,16 @@ package dadkvs.server;
 
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Sequencer {
-	private int _seqNumber = 0;
-	private final ReadWriteLock _seqLock = new ReentrantReadWriteLock();
+    private final AtomicInteger _seqNumber = new AtomicInteger(0);
 
-	public int readSeqNumber() {
-		int seqNumber;
-		_seqLock.readLock().lock();
-		try {
-			seqNumber = _seqNumber;
-		} finally {
-			_seqLock.readLock().unlock();
-		}
-		return seqNumber;
-	}
+    public int readSeqNumber() {
+        return _seqNumber.get();
+    }
 
-	public int getSequenceNumber() {
-		int seqNumber;
-		_seqLock.readLock().lock();
-		try {
-			seqNumber = _seqNumber;
-		} finally {
-			_seqLock.readLock().unlock();
-		}
-		incrementSeqNumber();
-		return seqNumber;
-	}
-
-	private void incrementSeqNumber() {
-		_seqLock.writeLock().lock();
-		try {
-			_seqNumber++;
-			if (_seqNumber == Integer.MAX_VALUE) {
-				_seqNumber = 0;
-			}
-		} finally {
-			_seqLock.writeLock().unlock();
-		}
-	}
+    public int getSequenceNumber() {
+        return _seqNumber.getAndUpdate(seq -> (seq == Integer.MAX_VALUE) ? 0 : seq + 1);
+    }
 }

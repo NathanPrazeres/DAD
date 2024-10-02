@@ -22,6 +22,7 @@ public class FastPaxosQueue {
 					try {
 						_waitQueueCondition.await();
 					} catch (InterruptedException e) {
+						Thread.currentThread().interrupt();
 						throw new RuntimeException(e);
 					}
 				}

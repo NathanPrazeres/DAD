@@ -9,6 +9,7 @@ import dadkvs.DadkvsMainServiceGrpc;
 import dadkvs.DadkvsFastPaxosServiceGrpc;
 import dadkvs.util.GenericResponseCollector;
 import dadkvs.util.CollectorStreamObserver;
+import java.util.Iterator;
 
 import io.grpc.stub.StreamObserver;
 
@@ -155,6 +156,13 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 	
 		try {
 			order_collector.waitForTarget(1);
+			if (order_responses.size() >= 1) {
+				Iterator<DadkvsFastPaxos.FastPaxosReply> read_iterator = order_responses.iterator();
+				DadkvsFastPaxos.FastPaxosReply read_reply = read_iterator.next();
+			} else {
+				System.out.println("error reading");
+				return false;
+			}
 		} catch (Exception e) {
 			server_state.logSystem.writeLog("Error waiting for FastPaxos responses: " + e.getMessage());
 			System.err.println("Error waiting for FastPaxos responses: " + e.getMessage());

@@ -126,7 +126,7 @@ public class DadkvsClient {
 			System.out.println(
 					"read key " + read_request.getKey() + " = <" + read_reply.getValue() + "," + read_reply.getTimestamp() + ">");
 			VersionedValue kv_entry = new VersionedValue(read_reply.getValue(), read_reply.getTimestamp());
-			;
+
 			return kv_entry;
 		} else {
 			System.out.println("error reading");

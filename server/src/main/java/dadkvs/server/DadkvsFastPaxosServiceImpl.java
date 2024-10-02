@@ -17,7 +17,8 @@ public class DadkvsFastPaxosServiceImpl extends DadkvsFastPaxosServiceGrpc.Dadkv
 	@Override
 	public void fastPaxos(DadkvsFastPaxos.FastPaxosRequest request,
 			StreamObserver<DadkvsFastPaxos.FastPaxosReply> responseObserver) {
-		// for debug purposes
+		
+		server_state.logSystem.writeLog(request.toString());
 		System.out.println(request);
 		System.exit(0);
 
@@ -26,6 +27,7 @@ public class DadkvsFastPaxosServiceImpl extends DadkvsFastPaxosServiceGrpc.Dadkv
 		DadkvsFastPaxos.FastPaxosReply response = DadkvsFastPaxos.FastPaxosReply.newBuilder().build();
 
 		responseObserver.onNext(response);
+		server_state.logSystem.writeLog("Fast paxos request completed");
 	}
 
 }

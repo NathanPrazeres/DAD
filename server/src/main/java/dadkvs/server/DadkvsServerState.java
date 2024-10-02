@@ -16,7 +16,7 @@ public class DadkvsServerState {
 	private Sequencer _sequencer; // Leader
 	private FastPaxosQueue _fastPaxosQueue; // Replica
 	private Queue _queue;
-
+	public LogSystem logSystem;
 
 	public DadkvsServerState(int kv_size, int port, int myself) {
 		base_port = port;
@@ -35,6 +35,9 @@ public class DadkvsServerState {
 		_sequencer = new Sequencer();
 		_queue = new Queue();
 		_fastPaxosQueue = new FastPaxosQueue();
+
+		logSystem = new LogSystem(String.valueOf(port + myself));
+		logSystem.writeLog("Started session");
 	}
 
 	public int getSequencerNumber() {

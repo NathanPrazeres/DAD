@@ -37,6 +37,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 	public void read(DadkvsMain.ReadRequest request, StreamObserver<DadkvsMain.ReadReply> responseObserver) {
 		// for debug purposes
 		System.out.println("Receiving read request:" + request);
+		server_state.logSystem.writeLog("Receiving read request:" + request);
 
 		int reqid = request.getReqid();
 		int key = request.getKey();
@@ -57,6 +58,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
 		responseObserver.onNext(response);
 		responseObserver.onCompleted();
+		server_state.logSystem.writeLog("Read request completed");
 	}
 
 	@Override
@@ -70,6 +72,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		int writeval = request.getWriteval();
 		
 		System.out.println("Receiving commit request:" + request);
+		server_state.logSystem.writeLog("Receiving commit request:" + request);
 
 		if (reqid % 100 != 0) { // NOTE: its not a console request
 			if (this.server_state.frozen) {
@@ -84,12 +87,17 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		System.out.println("reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2
 				+ " wk " + writekey + " writeval " + writeval);
 
+		server_state.logSystem.writeLog("reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2
+				+ " wk " + writekey + " writeval " + writeval);
+		
 		int seqNumber;
 
 		if (server_state.i_am_leader) {
 			seqNumber = server_state.getSequencerNumber();
 		} else {
+			server_state.logSystem.writeLog("Waiting for leader");
 			seqNumber = server_state.getSeqFromLeader(reqid);
+			server_state.logSystem.writeLog("Received");
 		}
 
 		server_state.waitInLine(seqNumber);
@@ -102,6 +110,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
 		// for debug purposes
 		System.out.println("Result is ready to be ordered by leader with reqid " + reqid);
+		server_state.logSystem.writeLog("Result is ready to be ordered by leader with reqid " + reqid);
 
 		DadkvsMain.CommitReply response = DadkvsMain.CommitReply.newBuilder()
 				.setReqid(reqid).setAck(result).build();
@@ -113,6 +122,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
 		// Send sequence number to other replicas
 		if (server_state.i_am_leader) {
+			server_state.logSystem.writeLog("Sending sequence number to replicas");
 			doFastPaxos(reqid, seqNumber);
 		}
 	}
@@ -123,6 +133,8 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		order_request.setReqId(req_id)
 				.setSeqNum(seq_num);
 
+		server_state.logSystem.writeLog("Request ID: " + req_id);
+		server_state.logSystem.writeLog("Sequence Number: " + seq_num);
 		System.out.println("Request ID: " + req_id);
 		System.out.println("Sequence Number: " + seq_num);
 
@@ -136,8 +148,6 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 
 		}
 
-		// TODO: handle responses
-
-		return true; // idk??????
+		return true;
 	}
 }

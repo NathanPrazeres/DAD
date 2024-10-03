@@ -105,12 +105,11 @@ public class DadkvsClient {
 		int reqid = sequence_number * 100 + client_id;
 
 		DadkvsMain.ReadRequest.Builder read_request = DadkvsMain.ReadRequest.newBuilder();
-		;
+
 		ArrayList<DadkvsMain.ReadReply> read_responses = new ArrayList<DadkvsMain.ReadReply>();
-		;
+
 		GenericResponseCollector<DadkvsMain.ReadReply> read_collector = new GenericResponseCollector<DadkvsMain.ReadReply>(
-				read_responses, n_servers);
-		;
+			read_responses, n_servers);
 
 		read_request.setReqid(reqid).setKey(key);
 		for (int i = 0; i < n_servers; i++) {
@@ -127,7 +126,7 @@ public class DadkvsClient {
 			System.out.println(
 					"read key " + read_request.getKey() + " = <" + read_reply.getValue() + "," + read_reply.getTimestamp() + ">");
 			VersionedValue kv_entry = new VersionedValue(read_reply.getValue(), read_reply.getTimestamp());
-			;
+
 			return kv_entry;
 		} else {
 			System.out.println("error reading");

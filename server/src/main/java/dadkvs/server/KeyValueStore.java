@@ -44,4 +44,15 @@ public class KeyValueStore {
 			return false;
 		}
 	}
+
+	@Override
+	public String toString() {
+		StringBuilder vals = new StringBuilder();
+		for (int i = 0; i < size; i++) {
+			if (values[i].getVersion() != 0) {
+				vals.append("Key: " + i + " Value: " + values[i].getValue() + " Version: " + values[i].getVersion() + "\n");
+			}
+		}
+		return vals.toString();
+	}
 }

@@ -21,6 +21,11 @@ public class DadkvsConsoleServiceImpl extends DadkvsConsoleServiceGrpc.DadkvsCon
 		System.out.println(request);
 
 		boolean response_value = true;
+		if (request.getIsleader()) {
+			server_state.paxosState.promote();
+		} else {
+			server_state.paxosState.demote();
+		}
 		this.server_state.i_am_leader = request.getIsleader();
 
 		// for debug purposes

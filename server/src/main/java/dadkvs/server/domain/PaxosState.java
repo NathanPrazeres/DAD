@@ -8,4 +8,6 @@ public interface PaxosState {
     // public  handlePrepareRequest(request);
     public void handleCommittx(int reqid);
     public void setServerState(DadkvsServerState serverState);
+    public void promote();
+    public void demote();
 }

@@ -2,6 +2,7 @@ package dadkvs.server;
 
 import dadkvs.server.domain.PaxosState;
 import dadkvs.server.domain.Learner;
+import dadkvs.server.domain.Acceptor;
 
 public class DadkvsServerState {
 	boolean i_am_leader;
@@ -40,11 +41,22 @@ public class DadkvsServerState {
 
 		_queue = new Queue();
 
-		paxosState = new Learner();
-		paxosState.setServerState(this);
+		if (myself > 2)
+			paxosState = new Learner();
+		else
+			paxosState = new Acceptor();
 
 		logSystem = new LogSystem(String.valueOf(port + myself), 1);
 		logSystem.writeLog("Started session");
+		logSystem.writeLog("I am " + paxosState.getClass().getSimpleName());
+
+		paxosState.setServerState(this);
+	}
+
+	public <T extends PaxosState> void changePaxosState(T newState) {
+		logSystem.writeLog("Changed paxos state from " + paxosState.getClass().getSimpleName() + " to " + newState.getClass().getSimpleName());
+        paxosState = newState;
+        paxosState.setServerState(this);
 	}
 
 	public int getSequenceNumber(int reqid) {

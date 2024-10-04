@@ -17,4 +17,10 @@ public class Learner implements PaxosState {
     public void handleCommittx(int reqid) {
         // Learner does nothing
     }
+
+    public void promote() {
+        _serverState.changePaxosState(new Acceptor());
+    }
+
+    public void demote() {}
 }

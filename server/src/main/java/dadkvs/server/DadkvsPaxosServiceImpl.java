@@ -22,52 +22,7 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 		System.out.println("Receive phase1 request");
 		server_state.logSystem.writeLog("Receive phase1 request: " + request.getPhase1Index());
 
-		// // NOTE: for clarity:
-		// // - the request was phase 1a: Prepare
-		// // - the response is phase 1b: Promise
-
-		// // NOTE: for EXTRA clarity:
-		// // - index: unique index for this instance of paxos
-		// // - timestamp: represents attemp x for index i of paxos
-		// // timestamp gets incremented with each new attempt of paxos instance (i)
-
-		// int proposalConfig = request.getPhase1Config();
-		// int proposalIndex = request.getPhase1Index();
-		// int proposalTimestamp = request.getPhase1Timestamp();
-
-		// DadkvsPaxosState paxos_state = server_state.getPaxosInstance(proposalIndex);
-
-		// // Get current proposal information from the server state
-		// int highest_timestamp = paxos_state.getHighestTimestamp();
-
-		// // NOTE: phase 1b: Promise
-		// DadkvsPaxos.PhaseOneReply response;
-		// // Check if the proposal's timestamp is higher than the current highest one
-		// if (proposalTimestamp > highest_timestamp) {
-		// 	// Promise to accept this proposal
-
-		// 	int accepted_value = paxos_state.getAcceptedValue();
-
-		// 	// Build the response with acceptance and previously accepted value (if any)
-		// 	response = DadkvsPaxos.PhaseOneReply.newBuilder()
-		// 			.setPhase1Config(proposalConfig)
-		// 			.setPhase1Index(proposalIndex)
-		// 			.setPhase1Accepted(true)
-		// 			.setPhase1Value(accepted_value)
-		// 			.setPhase1Timestamp(highest_timestamp)
-		// 			.build();
-
-		// 	paxos_state.setHighestTimestamp(proposalTimestamp);
-		// } else {
-		// 	// Reject if the proposal is outdated
-		// 	response = DadkvsPaxos.PhaseOneReply.newBuilder()
-		// 			.setPhase1Config(proposalConfig)
-		// 			.setPhase1Index(proposalIndex)
-		// 			.setPhase1Accepted(false)
-		// 			.build();
-		// }
-		// server_state.logSystem.writeLog("Phase one reply sent.");
-		// responseObserver.onNext(response);
+		responseObserver.onNext(server_state.paxosState.handlePrepareRequest(request));
 		responseObserver.onCompleted();
 	}
 
@@ -76,8 +31,8 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 			StreamObserver<DadkvsPaxos.PhaseTwoReply> responseObserver) {
 		// for debug purposes
 		server_state.logSystem.writeLog("Received phase two request");
-		// System.out.println("Received phase two request: " + request);
-		server_state.logSystem.writeLog("Phase two reply sent.");
+		System.out.println("Received phase two request: " + request);
+		responseObserver.onNext(server_state.paxosState.handleAcceptRequest(request));
 		responseObserver.onCompleted();
 	}
 

@@ -3,12 +3,15 @@ package dadkvs.server;
 import dadkvs.server.domain.PaxosState;
 import dadkvs.server.domain.Learner;
 import dadkvs.server.domain.Acceptor;
+import dadkvs.DadkvsPaxosServiceGrpc;
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
 
 public class DadkvsServerState {
 	boolean i_am_leader;
 	int n_servers;
 	int debug_mode;
-	int base_port;
+	public int base_port;
 	int my_id;
 	int store_size;
 	public KeyValueStore store;
@@ -22,6 +25,7 @@ public class DadkvsServerState {
 
 	public PaxosState paxosState;
 	public LogSystem logSystem;
+	int configuration;
 
 	public DadkvsServerState(int kv_size, int port, int myself) {
 		base_port = port;
@@ -36,6 +40,7 @@ public class DadkvsServerState {
 		main_loop_worker.start();
 		slow_mode = false;
 		frozen = false;
+		configuration = 0;
 
 		_paxosQueue = new PaxosQueue();
 
@@ -51,6 +56,18 @@ public class DadkvsServerState {
 		logSystem.writeLog("I am " + paxosState.getClass().getSimpleName());
 
 		paxosState.setServerState(this);
+	}
+
+	public int myId() {
+		return my_id;
+	}
+
+	public int getNumberOfServers() {
+		return n_servers;
+	}
+
+	public int getConfiguration() {
+		return configuration;
 	}
 
 	public <T extends PaxosState> void changePaxosState(T newState) {
@@ -69,5 +86,9 @@ public class DadkvsServerState {
 
 	public void nextInLine() {
 		_queue.incrementQueueNumber();
+	}
+
+	public int getQuorum(int n_acceptors) {
+		return (int) Math.floor(n_acceptors / 2) + 1;
 	}
 }

@@ -8,29 +8,86 @@ import io.grpc.stub.StreamObserver;
 
 public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosServiceImplBase {
 
-	private DadkvsServerState _state;
+	DadkvsServerState server_state;
 
 	public DadkvsPaxosServiceImpl(DadkvsServerState state) {
-		_state = state;
+		this.server_state = state;
+
 	}
 
 	@Override
-	public void phaseOne(DadkvsPaxos.Prepare request,
-			StreamObserver<DadkvsPaxos.Promise> responseObserver) {
-        // responseObserver.onNext(_state.paxosState.handlePrepareRequest(request));
+	public void phaseone(DadkvsPaxos.PhaseOneRequest request,
+			StreamObserver<DadkvsPaxos.PhaseOneReply> responseObserver) {
+		// for debug purposes
+		System.out.println("Receive phase1 request");
+		server_state.logSystem.writeLog("Receive phase1 request: " + request.getPhase1Index());
+
+		// // NOTE: for clarity:
+		// // - the request was phase 1a: Prepare
+		// // - the response is phase 1b: Promise
+
+		// // NOTE: for EXTRA clarity:
+		// // - index: unique index for this instance of paxos
+		// // - timestamp: represents attemp x for index i of paxos
+		// // timestamp gets incremented with each new attempt of paxos instance (i)
+
+		// int proposalConfig = request.getPhase1Config();
+		// int proposalIndex = request.getPhase1Index();
+		// int proposalTimestamp = request.getPhase1Timestamp();
+
+		// DadkvsPaxosState paxos_state = server_state.getPaxosInstance(proposalIndex);
+
+		// // Get current proposal information from the server state
+		// int highest_timestamp = paxos_state.getHighestTimestamp();
+
+		// // NOTE: phase 1b: Promise
+		// DadkvsPaxos.PhaseOneReply response;
+		// // Check if the proposal's timestamp is higher than the current highest one
+		// if (proposalTimestamp > highest_timestamp) {
+		// 	// Promise to accept this proposal
+
+		// 	int accepted_value = paxos_state.getAcceptedValue();
+
+		// 	// Build the response with acceptance and previously accepted value (if any)
+		// 	response = DadkvsPaxos.PhaseOneReply.newBuilder()
+		// 			.setPhase1Config(proposalConfig)
+		// 			.setPhase1Index(proposalIndex)
+		// 			.setPhase1Accepted(true)
+		// 			.setPhase1Value(accepted_value)
+		// 			.setPhase1Timestamp(highest_timestamp)
+		// 			.build();
+
+		// 	paxos_state.setHighestTimestamp(proposalTimestamp);
+		// } else {
+		// 	// Reject if the proposal is outdated
+		// 	response = DadkvsPaxos.PhaseOneReply.newBuilder()
+		// 			.setPhase1Config(proposalConfig)
+		// 			.setPhase1Index(proposalIndex)
+		// 			.setPhase1Accepted(false)
+		// 			.build();
+		// }
+		// server_state.logSystem.writeLog("Phase one reply sent.");
+		// responseObserver.onNext(response);
 		responseObserver.onCompleted();
 	}
 
 	@Override
-	public void phaseTwo(DadkvsPaxos.Accept request,
-			StreamObserver<DadkvsPaxos.Accepted> responseObserver) {
-        // responseObserver.onNext(_state.paxosState.handleAccept(request));
+	public void phasetwo(DadkvsPaxos.PhaseTwoRequest request,
+			StreamObserver<DadkvsPaxos.PhaseTwoReply> responseObserver) {
+		// for debug purposes
+		server_state.logSystem.writeLog("Received phase two request");
+		// System.out.println("Received phase two request: " + request);
+		server_state.logSystem.writeLog("Phase two reply sent.");
 		responseObserver.onCompleted();
 	}
 
 	@Override
 	public void learn(DadkvsPaxos.LearnRequest request, StreamObserver<DadkvsPaxos.LearnReply> responseObserver) {
-		_state.logSystem.writeLog("Learn request received");
+		// for debug purposes
+		server_state.logSystem.writeLog("Received learn request");
+		System.out.println("Received learn request: " + request);
+
+		server_state.logSystem.writeLog("Learn reply sent.");
 		// responseObserver.onNext(response);
 		responseObserver.onCompleted();
 	}

@@ -14,14 +14,14 @@ import java.util.Iterator;
 import io.grpc.stub.StreamObserver;
 
 public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServiceImplBase {
-	private DadkvsServerState server_state;
+	private DadkvsServerState _serverState;
 	private DadkvsFastPaxosServiceGrpc.DadkvsFastPaxosServiceStub[] _async_stubs;
 	int timestamp;
 
 	static final int SERVER_DELAY = 5000; // 5 seconds
 
 	public DadkvsMainServiceImpl(DadkvsServerState state, DadkvsFastPaxosServiceGrpc.DadkvsFastPaxosServiceStub[] async_stubs) {
-		this.server_state = state;
+		this._serverState = state;
 		this.timestamp = 0;
 		_async_stubs = async_stubs;
 	}
@@ -38,31 +38,33 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 	public void read(DadkvsMain.ReadRequest request, StreamObserver<DadkvsMain.ReadReply> responseObserver) {
 		// for debug purposes
 		System.out.println("Receiving read request:" + request);
-		server_state.logSystem.writeLog("Receiving read request:" + request);
+		_serverState.logSystem.writeLog("Receiving read request");
 
 		int reqid = request.getReqid();
 		int key = request.getKey();
 
 		if (reqid % 100 != 0) { // NOTE: its not a console request
-			if (this.server_state.frozen) {
+			if (_serverState.frozen) {
 				System.out.println("Server is frozen. Blocking all client requests.");
 				return;
-			} else if (this.server_state.slow_mode) {
+			} else if (_serverState.slow_mode) {
 				tryWait();
 			}
 		}
 
-		VersionedValue vv = this.server_state.store.read(key);
+		VersionedValue vv = _serverState.store.read(key);
 		DadkvsMain.ReadReply response = DadkvsMain.ReadReply.newBuilder()
 				.setReqid(reqid).setValue(vv.getValue()).setTimestamp(vv.getVersion()).build();
 
 		responseObserver.onNext(response);
 		responseObserver.onCompleted();
-		server_state.logSystem.writeLog("Read request completed");
+		_serverState.logSystem.writeLog("Read request completed");
 	}
 
 	@Override
 	public void committx(DadkvsMain.CommitRequest request, StreamObserver<DadkvsMain.CommitReply> responseObserver) {
+		_serverState.logSystem.writeLog("Received commit request");
+
 		int reqid = request.getReqid();
 		int key1 = request.getKey1();
 		int version1 = request.getVersion1();
@@ -70,106 +72,47 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		int version2 = request.getVersion2();
 		int writekey = request.getWritekey();
 		int writeval = request.getWriteval();
+
+		// if (reqid % 100 != 0) { // NOTE: its not a console request
+		// 	synchronized (_serverState.freeze_lock) {
+		// 		while (_serverState.frozen) {
+		// 			try {
+		// 				_serverState.freeze_lock.wait();
+		// 			} catch (InterruptedException e) {
+		// 			}
+		// 		}
+		// 	}
+		// 	if (_serverState.slow_mode) {
+		// 		trySleep();
+		// 	}
+		// }
 		
-		System.out.println("Receiving commit request:" + request);
-		server_state.logSystem.writeLog("Receiving commit request:" + request);
-
-		if (reqid % 100 != 0) { // NOTE: its not a console request
-			if (this.server_state.frozen) {
-				System.out.println("Server is frozen. Blocking all client requests.");
-				return;
-			} else if (this.server_state.slow_mode) {
-				tryWait();
-			}
-		}
-
+		_serverState.paxosState.handleCommittx(reqid);
+		
 		// for debug purposes
-		System.out.println("reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2
-				+ " wk " + writekey + " writeval " + writeval);
+        _serverState.logSystem.writeLog("reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2
+                + " wk " + writekey + " writeval " + writeval);
+        System.out.println("reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2
+                + " wk " + writekey + " writeval " + writeval);
 
-		server_state.logSystem.writeLog("reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2
-				+ " wk " + writekey + " writeval " + writeval);
+		_serverState.logSystem.writeLog("Waiting for sequence number");
+		int seqNumber = _serverState.getSequenceNumber(reqid);
+		_serverState.logSystem.writeLog("Got: " + seqNumber);
+
+        _serverState.waitInLine(seqNumber);
+		timestamp++;
+
+		TransactionRecord txrecord = new TransactionRecord(key1, version1, key2, version2, writekey, writeval, timestamp);
+
+		boolean result = _serverState.store.commit(txrecord);
 		
-		int seqNumber;
-
-		if (server_state.i_am_leader) {
-			server_state.logSystem.writeLog("Getting sequence number");
-			seqNumber = server_state.getSequencerNumber();
-		} else {
-			server_state.logSystem.writeLog("Waiting for leader");
-			seqNumber = server_state.getSeqFromLeader(reqid);
-		}
-		server_state.logSystem.writeLog("Got: " + seqNumber);
-
-		server_state.logSystem.writeLog("Waiting for queue");
-		server_state.waitInLine(seqNumber);
-		server_state.logSystem.writeLog("My turn");
-				
-		this.timestamp++;
-		TransactionRecord txrecord = new TransactionRecord(key1, version1, key2, version2, writekey, writeval,
-			this.timestamp);
-
-		boolean result = this.server_state.store.commit(txrecord);
-
 		DadkvsMain.CommitReply response = DadkvsMain.CommitReply.newBuilder()
-				.setReqid(reqid).setAck(result).build();
+			.setReqid(reqid).setAck(result).build();
+
+		_serverState.logSystem.writeLog(_serverState.store.toString());
+		_serverState.nextInLine();
 
 		responseObserver.onNext(response);
 		responseObserver.onCompleted();
-
-		server_state.nextInLine();
-
-		// Send sequence number to other replicas
-		if (server_state.i_am_leader) {
-			server_state.logSystem.writeLog("Sending sequence number to replicas");
-			doFastPaxos(reqid, seqNumber);
-		}
-		server_state.logSystem.writeLog("Tx request completed");
-		server_state.logSystem.writeLog(server_state.store.toString());
-	}
-
-	public boolean doFastPaxos(int req_id, int seq_num) {
-		DadkvsFastPaxos.FastPaxosRequest.Builder order_request = DadkvsFastPaxos.FastPaxosRequest.newBuilder();
-
-		order_request.setReqId(req_id)
-				.setSeqNum(seq_num);
-
-		server_state.logSystem.writeLog("Request ID: " + req_id);
-		server_state.logSystem.writeLog("Sequence Number: " + seq_num);
-		System.out.println("Request ID: " + req_id);
-		System.out.println("Sequence Number: " + seq_num);
-
-		ArrayList<DadkvsFastPaxos.FastPaxosReply> order_responses = new ArrayList<DadkvsFastPaxos.FastPaxosReply>();
-		GenericResponseCollector<DadkvsFastPaxos.FastPaxosReply> order_collector = new GenericResponseCollector<DadkvsFastPaxos.FastPaxosReply>(
-				order_responses, server_state.n_servers - 1);
-				
-		for (int i = 0; i < server_state.n_servers - 1; i++) {
-			CollectorStreamObserver<DadkvsFastPaxos.FastPaxosReply> order_observer = new CollectorStreamObserver<DadkvsFastPaxos.FastPaxosReply>(
-					order_collector);
-			try {
-				_async_stubs[i].fastPaxos(order_request.build(), order_observer);
-			} catch (Exception e) {
-				server_state.logSystem.writeLog("Error sending FastPaxos request: " + e.getMessage());
-				System.err.println("Error sending FastPaxos request: " + e.getMessage());
-			}
-		}
-	
-		try {
-			order_collector.waitForTarget(1);
-			if (order_responses.size() >= 1) {
-				Iterator<DadkvsFastPaxos.FastPaxosReply> read_iterator = order_responses.iterator();
-				DadkvsFastPaxos.FastPaxosReply read_reply = read_iterator.next();
-			} else {
-				System.out.println("error reading");
-				return false;
-			}
-		} catch (Exception e) {
-			server_state.logSystem.writeLog("Error waiting for FastPaxos responses: " + e.getMessage());
-			System.err.println("Error waiting for FastPaxos responses: " + e.getMessage());
-			return false;
-		}
-
-		
-		return true;
 	}
 }

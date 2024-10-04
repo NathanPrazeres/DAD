@@ -7,7 +7,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class FastPaxosQueue {
+public class PaxosQueue {
     private ConcurrentHashMap<Integer, Integer> _requestMap  = new ConcurrentHashMap<>();
 	private final Lock _waitQueueLock = new ReentrantLock();
 	private final Condition _waitQueueCondition = _waitQueueLock.newCondition();
@@ -31,7 +31,6 @@ public class FastPaxosQueue {
 				_waitQueueLock.unlock();
 			}
 		}
-		
 		return seqNumber;
     }
 

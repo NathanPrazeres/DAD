@@ -1,5 +1,8 @@
 package dadkvs.server;
 
+import dadkvs.server.domain.PaxosState;
+import dadkvs.server.domain.Learner;
+
 public class DadkvsServerState {
 	boolean i_am_leader;
 	int n_servers;
@@ -7,15 +10,16 @@ public class DadkvsServerState {
 	int base_port;
 	int my_id;
 	int store_size;
-	KeyValueStore store;
+	public KeyValueStore store;
 	MainLoop main_loop;
 	Thread main_loop_worker;
 	boolean slow_mode;
 	boolean frozen;
 
-	private Sequencer _sequencer; // Leader
-	private FastPaxosQueue _fastPaxosQueue; // Replica
 	private Queue _queue;
+	private PaxosQueue _paxosQueue;
+
+	public PaxosState paxosState;
 	public LogSystem logSystem;
 
 	public DadkvsServerState(int kv_size, int port, int myself) {
@@ -32,24 +36,19 @@ public class DadkvsServerState {
 		slow_mode = false;
 		frozen = false;
 
-		_sequencer = new Sequencer();
-		_queue = new Queue();
-		_fastPaxosQueue = new FastPaxosQueue();
+		_paxosQueue = new PaxosQueue();
 
-		logSystem = new LogSystem(String.valueOf(port + myself));
+		_queue = new Queue();
+
+		paxosState = new Learner();
+		paxosState.setServerState(this);
+
+		logSystem = new LogSystem(String.valueOf(port + myself), 1);
 		logSystem.writeLog("Started session");
 	}
 
-	public int getSequencerNumber() {
-		return _sequencer.getSequenceNumber();
-	}
-
-	public int getSeqFromLeader(int reqid) {
-		return _fastPaxosQueue.getSequenceNumber(reqid);
-	}
-
-	public void addSeqFromLeader(int reqid, int seqNumber) {
-		_fastPaxosQueue.addRequest(reqid, seqNumber);
+	public int getSequenceNumber(int reqid) {
+		return _paxosQueue.getSequenceNumber(reqid);
 	}
 
 	public void waitInLine(int queueNumber) {

@@ -19,9 +19,6 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 	public void phaseone(DadkvsPaxos.PhaseOneRequest request,
 			StreamObserver<DadkvsPaxos.PhaseOneReply> responseObserver) {
 		// for debug purposes
-		System.out.println("Receive phase1 request");
-		server_state.logSystem.writeLog("Receive phase1 request: " + request.getPhase1Index());
-
 		responseObserver.onNext(server_state.paxosState.handlePrepareRequest(request));
 		responseObserver.onCompleted();
 	}
@@ -30,8 +27,6 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 	public void phasetwo(DadkvsPaxos.PhaseTwoRequest request,
 			StreamObserver<DadkvsPaxos.PhaseTwoReply> responseObserver) {
 		// for debug purposes
-		server_state.logSystem.writeLog("Received phase two request");
-		System.out.println("Received phase two request: " + request);
 		responseObserver.onNext(server_state.paxosState.handleAcceptRequest(request));
 		responseObserver.onCompleted();
 	}
@@ -39,9 +34,6 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 	@Override
 	public void learn(DadkvsPaxos.LearnRequest request, StreamObserver<DadkvsPaxos.LearnReply> responseObserver) {
 		// for debug purposes
-		server_state.logSystem.writeLog("Received learn request");
-		System.out.println("Received learn request: " + request);
-
 		server_state.logSystem.writeLog("Learn reply sent.");
 		// responseObserver.onNext(response);
 		responseObserver.onCompleted();

@@ -6,68 +6,65 @@ import dadkvs.server.TransactionRecord;
 import dadkvs.DadkvsPaxos;
 import dadkvs.DadkvsPaxosServiceGrpc;
 
-public class Acceptor implements PaxosState {
-    private DadkvsServerState _serverState;
-    private int highestTimestamp = -1;
-    private int acceptedValue = -1;
+public class Acceptor extends PaxosState {
+	private int acceptedValue = -1;
 
-    public void setServerState(DadkvsServerState serverState) {
-        _serverState = serverState;
-    }
+	public void setServerState(DadkvsServerState serverState) {
+		_serverState = serverState;
+	}
 
-    // public void handleLearnRequest();
-    public DadkvsPaxos.PhaseOneReply handlePrepareRequest(DadkvsPaxos.PhaseOneRequest request) {
-        int proposalConfig = request.getPhase1Config();
+	public DadkvsPaxos.PhaseOneReply handlePrepareRequest(DadkvsPaxos.PhaseOneRequest request) {
+		int proposalConfig = request.getPhase1Config();
 		int proposalIndex = request.getPhase1Index();
 		int proposalTimestamp = request.getPhase1Timestamp();
 
-        if (proposalTimestamp > highestTimestamp) {
-            // accept value
-            DadkvsPaxos.PhaseOneReply response = DadkvsPaxos.PhaseOneReply.newBuilder()
+		_serverState.logSystem.writeLog("[PAXOS (" + proposalIndex + ")]\t\tRECEIVED PREPARE.");
+
+		if (proposalTimestamp > highestTimestamp) {
+			_serverState.logSystem
+					.writeLog("[PAXOS (" + proposalIndex + ")] Proposer's timestamp was higher than ours:\tAccepting.");
+			// accept value
+			DadkvsPaxos.PhaseOneReply response = DadkvsPaxos.PhaseOneReply.newBuilder()
 					.setPhase1Config(proposalConfig)
 					.setPhase1Index(proposalIndex)
 					.setPhase1Accepted(true)
-                    .setPhase1Value(acceptedValue)
+					.setPhase1Value(acceptedValue)
 					.setPhase1Timestamp(highestTimestamp)
 					.build();
 
-            highestTimestamp = proposalTimestamp;
+			highestTimestamp = proposalTimestamp;
 
-            return response;
-        } else {
-            // reject value
-            DadkvsPaxos.PhaseOneReply response = DadkvsPaxos.PhaseOneReply.newBuilder()
+			return response;
+		} else {
+			_serverState.logSystem
+					.writeLog("[PAXOS (" + proposalIndex + ")] Proposer's timestamp was lower than ours:\tRejecting.");
+			// reject value
+			DadkvsPaxos.PhaseOneReply response = DadkvsPaxos.PhaseOneReply.newBuilder()
 					.setPhase1Config(proposalConfig)
 					.setPhase1Index(proposalIndex)
 					.setPhase1Accepted(false)
 					.build();
 
-            return response;
-        }
-    }
+			return response;
+		}
+	}
 
-    public DadkvsPaxos.PhaseTwoReply handleAcceptRequest(DadkvsPaxos.PhaseTwoRequest request) {
-        int proposalConfig = request.getPhase2Config();
+	public DadkvsPaxos.PhaseTwoReply handleAcceptRequest(DadkvsPaxos.PhaseTwoRequest request) {
+		int proposalConfig = request.getPhase2Config();
 		int proposalIndex = request.getPhase2Index();
 		int proposalValue = request.getPhase2Value();
 		int proposalTimestamp = request.getPhase2Timestamp();
 
-		// if acceptor has already accepted any value, reject
-		if (acceptedValue == -1) {
-
-			DadkvsPaxos.PhaseTwoReply response = DadkvsPaxos.PhaseTwoReply.newBuilder()
-					.setPhase2Config(proposalConfig)
-					.setPhase2Index(proposalIndex)
-					.setPhase2Accepted(false)
-					.build();
-            
-			return response;
-		}
+		_serverState.logSystem.writeLog("[PAXOS (" + proposalIndex + ")]\t\tRECEIVED ACCEPT.");
 
 		// If the proposal's timestamp is higher than the highest seen, accept it
 		if (proposalTimestamp >= highestTimestamp) {
-            highestTimestamp = proposalTimestamp;
-            acceptedValue = proposalValue;
+
+			_serverState.logSystem
+					.writeLog("[PAXOS (" + proposalIndex + ")] Proposer's timestamp was higher/equal to ours:\tAccepting.");
+
+			highestTimestamp = proposalTimestamp;
+			acceptedValue = proposalValue;
 
 			// Respond that the proposal was accepted
 			DadkvsPaxos.PhaseTwoReply response = DadkvsPaxos.PhaseTwoReply.newBuilder()
@@ -76,11 +73,15 @@ public class Acceptor implements PaxosState {
 					.setPhase2Accepted(true)
 					.build();
 
+			_serverState.logSystem
+					.writeLog("[PAXOS (" + proposalIndex + ")] Sending Learn request to all Learners.");
 			// acceptors should trigger the learn request once they accept a value
 			// boolean learned = sendLearnRequests(proposalIndex);
 
-            return response;
+			return response;
 		} else {
+			_serverState.logSystem
+					.writeLog("[PAXOS (" + proposalIndex + ")] Proposer's timestamp was lower than ours:\tRejecting.");
 			// Reject if a higher proposal has already been seen
 			DadkvsPaxos.PhaseTwoReply response = DadkvsPaxos.PhaseTwoReply.newBuilder()
 					.setPhase2Config(proposalConfig)
@@ -88,20 +89,20 @@ public class Acceptor implements PaxosState {
 					.setPhase2Accepted(false)
 					.build();
 
-            return response;
+			return response;
 		}
-    }
+	}
 
+	public void handleCommittx(int reqid) {
+		// Acceptor does nothing
+	}
 
-    public void handleCommittx(int reqid) {
-        // Learner does nothings
-    }
+	public void promote() {
+		_serverState.changePaxosState(new Proposer());
 
-    public void promote() {
-        _serverState.changePaxosState(new Leader());
-    }
+	}
 
-    public void demote() {
-        _serverState.changePaxosState(new Learner());
-    }
+	public void demote() {
+		_serverState.changePaxosState(new Learner());
+	}
 }

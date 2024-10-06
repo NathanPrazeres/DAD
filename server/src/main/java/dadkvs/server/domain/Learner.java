@@ -6,15 +6,12 @@ import dadkvs.server.TransactionRecord;
 import dadkvs.DadkvsPaxos;
 
 public class Learner extends PaxosState {
-	private DadkvsServerState _serverState;
 	private int highestTimestamp = -1;
 
 	public void setServerState(DadkvsServerState serverState) {
-		_serverState = serverState;
+		this.serverState = serverState;
 	}
 
-	// public void handleLearnRequest();
-	// public void handlePrepareRequest();
 	public DadkvsPaxos.PhaseOneReply handlePrepareRequest(DadkvsPaxos.PhaseOneRequest request) {
 		return null;
 	}
@@ -28,7 +25,7 @@ public class Learner extends PaxosState {
 	}
 
 	public void promote() {
-		_serverState.changePaxosState(new Acceptor());
+		this.serverState.changePaxosState(new Acceptor());
 	}
 
 	public void demote() {

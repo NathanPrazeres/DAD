@@ -19,8 +19,6 @@ public class DadkvsServer {
 
 	static DadkvsServerState server_state;
 
-	static DadkvsFastPaxosServiceGrpc.DadkvsFastPaxosServiceStub[] async_stubs;
-
 	/** Server host port. */
 	private static int port;
 
@@ -49,31 +47,7 @@ public class DadkvsServer {
 
 		port = base_port + my_id;
 
-		// create stubs to communicate between servers
-		String[] targets = new String[server_state.n_servers - 1];
-		int j = 0;
-		for (int i = 0; i < server_state.n_servers; i++) {
-			if (i == my_id)
-				continue;
-			int target_port = base_port + i;
-			targets[j] = new String();
-			targets[j] = "localhost:" + target_port;
-			System.out.printf("targets[%d] = %s%n", j, targets[j]);
-			j++;
-		}
-
-		ManagedChannel[] channels = new ManagedChannel[server_state.n_servers - 1];
-		for (int i = 0; i < server_state.n_servers - 1; i++) {
-			channels[i] = ManagedChannelBuilder.forTarget(targets[i]).usePlaintext().build();
-		}
-
-		async_stubs = new DadkvsFastPaxosServiceGrpc.DadkvsFastPaxosServiceStub[server_state.n_servers - 1];
-
-		for (int i = 0; i < server_state.n_servers - 1; i++) {
-			async_stubs[i] = DadkvsFastPaxosServiceGrpc.newStub(channels[i]);
-		}
-
-		final BindableService service_impl = new DadkvsMainServiceImpl(server_state, async_stubs);
+		final BindableService service_impl = new DadkvsMainServiceImpl(server_state);
 		final BindableService console_impl = new DadkvsConsoleServiceImpl(server_state);
 		final BindableService paxos_impl = new DadkvsPaxosServiceImpl(server_state);
 

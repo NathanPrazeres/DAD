@@ -9,10 +9,10 @@ import io.grpc.ManagedChannelBuilder;
 
 public class DadkvsServerState {
 	boolean i_am_leader;
-	int n_servers;
+	public int n_servers;
 	int debug_mode;
 	public int base_port;
-	int my_id;
+	public int my_id;
 	int store_size;
 	public KeyValueStore store;
 	MainLoop main_loop;
@@ -26,7 +26,7 @@ public class DadkvsServerState {
 
 	public PaxosState paxosState;
 	public LogSystem logSystem;
-	int configuration;
+	public int configuration;
 
 	public DadkvsServerState(int kv_size, int port, int myself) {
 		base_port = port;
@@ -80,6 +80,10 @@ public class DadkvsServerState {
 
 	public int getSequenceNumber(int reqid) {
 		return _paxosQueue.getSequenceNumber(reqid);
+	}
+
+	public void addRequest(int reqid, int seqNumber) {
+		_paxosQueue.addRequest(reqid, seqNumber);
 	}
 
 	public void waitInLine(int queueNumber) {

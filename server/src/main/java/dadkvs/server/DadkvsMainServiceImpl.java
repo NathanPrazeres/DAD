@@ -15,15 +15,13 @@ import io.grpc.stub.StreamObserver;
 
 public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServiceImplBase {
 	private DadkvsServerState _serverState;
-	private DadkvsFastPaxosServiceGrpc.DadkvsFastPaxosServiceStub[] _async_stubs;
 	int timestamp;
 
-	static final int SERVER_DELAY = 3000; // 5 seconds
+	static final int SERVER_DELAY = 3000; // 3 seconds
 
-	public DadkvsMainServiceImpl(DadkvsServerState state, DadkvsFastPaxosServiceGrpc.DadkvsFastPaxosServiceStub[] async_stubs) {
+	public DadkvsMainServiceImpl(DadkvsServerState state) {
 		this._serverState = state;
 		this.timestamp = 0;
-		_async_stubs = async_stubs;
 	}
 
 	public void trySleep() {

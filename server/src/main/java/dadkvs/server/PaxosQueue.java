@@ -8,17 +8,17 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class PaxosQueue {
-    private ConcurrentHashMap<Integer, Integer> _requestMap  = new ConcurrentHashMap<>();
+	// (request ID, (Sequence number, counter))
+    private ConcurrentHashMap<Integer, ConcurrentHashMap<Integer, Integer>> _requestMap  = new ConcurrentHashMap<>();
 	private final Lock _waitQueueLock = new ReentrantLock();
 	private final Condition _waitQueueCondition = _waitQueueLock.newCondition();
 
     public int getSequenceNumber(int reqid) {
-		Integer seqNumber = _requestMap.get(reqid);
-		
+		Integer seqNumber = getValidSeqNum(reqid, 2);
 		while (seqNumber == null) {
 			_waitQueueLock.lock();
 			try {
-				while (_requestMap.get(reqid) == null) {
+				while (getValidSeqNum(reqid, 2) == null) {
 					try {
 						_waitQueueCondition.await();
 					} catch (InterruptedException e) {
@@ -26,7 +26,7 @@ public class PaxosQueue {
 						throw new RuntimeException(e);
 					}
 				}
-				seqNumber = _requestMap.get(reqid);
+				seqNumber = getValidSeqNum(reqid, 2);
 			} finally {
 				_waitQueueLock.unlock();
 			}
@@ -34,8 +34,27 @@ public class PaxosQueue {
 		return seqNumber;
     }
 
+	private Integer getValidSeqNum(int reqid, int counter) {
+		ConcurrentHashMap<Integer, Integer> seqMap = _requestMap.get(reqid);
+		if (seqMap != null) {
+			for (Integer seqNum : seqMap.keySet()) {
+				if (seqMap.get(seqNum) >= counter) {
+					return seqNum;
+				}
+			}
+		}
+		return null;
+	}
+
     public void addRequest(int reqid, int seqNumber) {
-		_requestMap.put(reqid, seqNumber);
+		if (_requestMap.get(reqid) != null) {
+			int counter = _requestMap.get(reqid).get(seqNumber);
+			_requestMap.get(reqid).put(seqNumber, counter++);
+		} else {
+			ConcurrentHashMap<Integer, Integer> seqMap = new ConcurrentHashMap();
+			seqMap.put(seqNumber, 1);
+			_requestMap.put(reqid, seqMap);
+		}
 		_waitQueueLock.lock();
 		try {
 			_waitQueueCondition.signalAll();

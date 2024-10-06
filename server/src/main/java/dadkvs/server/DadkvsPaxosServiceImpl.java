@@ -33,9 +33,14 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 
 	@Override
 	public void learn(DadkvsPaxos.LearnRequest request, StreamObserver<DadkvsPaxos.LearnReply> responseObserver) {
-		// for debug purposes
-		server_state.logSystem.writeLog("Learn reply sent.");
-		responseObserver.onNext(server_state.paxosState.handleLearnRequest(request));
+
+		try {
+			server_state.logSystem.writeLog("Learn request received at server " + server_state.my_id);
+			responseObserver.onNext(server_state.paxosState.handleLearnRequest(request));
+		} catch (Exception e) {
+			server_state.logSystem.writeLog("Error, exiting...");
+			System.exit(0);
+		}
 		responseObserver.onCompleted();
 	}
 }

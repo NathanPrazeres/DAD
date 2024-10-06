@@ -19,6 +19,7 @@ public class DadkvsServerState {
 	Thread main_loop_worker;
 	boolean slow_mode;
 	boolean frozen;
+	Object freeze_lock;
 
 	private Queue _queue;
 	private PaxosQueue _paxosQueue;
@@ -40,6 +41,7 @@ public class DadkvsServerState {
 		main_loop_worker.start();
 		slow_mode = false;
 		frozen = false;
+		freeze_lock = new Object();
 		configuration = 0;
 
 		_paxosQueue = new PaxosQueue();

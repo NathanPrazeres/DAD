@@ -18,7 +18,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 	private DadkvsFastPaxosServiceGrpc.DadkvsFastPaxosServiceStub[] _async_stubs;
 	int timestamp;
 
-	static final int SERVER_DELAY = 5000; // 5 seconds
+	static final int SERVER_DELAY = 3000; // 5 seconds
 
 	public DadkvsMainServiceImpl(DadkvsServerState state, DadkvsFastPaxosServiceGrpc.DadkvsFastPaxosServiceStub[] async_stubs) {
 		this._serverState = state;
@@ -26,11 +26,10 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		_async_stubs = async_stubs;
 	}
 
-	public void tryWait() {
+	public void trySleep() {
 		try {
 			Thread.sleep((int) (SERVER_DELAY * (Math.random() + 0.5))); // Median is SERVER_DELAY
 		} catch (InterruptedException e) {
-			e.printStackTrace();
 		}
 	}
 
@@ -44,11 +43,16 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		int key = request.getKey();
 
 		if (reqid % 100 != 0) { // NOTE: its not a console request
-			if (_serverState.frozen) {
-				System.out.println("Server is frozen. Blocking all client requests.");
-				return;
-			} else if (_serverState.slow_mode) {
-				tryWait();
+			synchronized (_serverState.freeze_lock) {
+				while (_serverState.frozen) {
+					try {
+						_serverState.freeze_lock.wait();
+					} catch (InterruptedException e) {
+					}
+				}
+			}
+			if (_serverState.slow_mode) {
+				trySleep();
 			}
 		}
 
@@ -73,22 +77,22 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		int writekey = request.getWritekey();
 		int writeval = request.getWriteval();
 
-		// if (reqid % 100 != 0) { // NOTE: its not a console request
-		// 	synchronized (_serverState.freeze_lock) {
-		// 		while (_serverState.frozen) {
-		// 			try {
-		// 				_serverState.freeze_lock.wait();
-		// 			} catch (InterruptedException e) {
-		// 			}
-		// 		}
-		// 	}
-		// 	if (_serverState.slow_mode) {
-		// 		trySleep();
-		// 	}
-		// }
-		
+		if (reqid % 100 != 0) { // NOTE: its not a console request
+			synchronized (_serverState.freeze_lock) {
+				while (_serverState.frozen) {
+					try {
+						_serverState.freeze_lock.wait();
+					} catch (InterruptedException e) {
+					}
+				}
+			}
+			if (_serverState.slow_mode) {
+				trySleep();
+			}
+		}
+
 		_serverState.paxosState.handleCommittx(reqid);
-		
+
 		// for debug purposes
         _serverState.logSystem.writeLog("reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2
                 + " wk " + writekey + " writeval " + writeval);
@@ -105,7 +109,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		TransactionRecord txrecord = new TransactionRecord(key1, version1, key2, version2, writekey, writeval, timestamp);
 
 		boolean result = _serverState.store.commit(txrecord);
-		
+
 		DadkvsMain.CommitReply response = DadkvsMain.CommitReply.newBuilder()
 			.setReqid(reqid).setAck(result).build();
 

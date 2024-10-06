@@ -122,7 +122,7 @@ public class Proposer extends PaxosState {
 	}
 
 	private void setNewTimestamp() {
-		_priority = _serverState.getNumberOfServers();
+		_priority += _serverState.getNumberOfServers();
 	}
 
 	public boolean runPaxos(int seqNum) {

@@ -6,8 +6,6 @@ import dadkvs.server.TransactionRecord;
 import dadkvs.DadkvsPaxos;
 
 public class Learner extends PaxosState {
-	private int highestTimestamp = -1;
-
 	public void setServerState(DadkvsServerState serverState) {
 		this.serverState = serverState;
 	}

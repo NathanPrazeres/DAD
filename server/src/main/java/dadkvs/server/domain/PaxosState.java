@@ -13,7 +13,7 @@ import dadkvs.util.CollectorStreamObserver;
 public abstract class PaxosState {
 
 	int highestTimestamp = -1;
-	AtomicInteger num_responses;
+	AtomicInteger num_responses = new AtomicInteger(0);
 	public DadkvsServerState serverState;
 
 	public abstract DadkvsPaxos.PhaseTwoReply handleAcceptRequest(DadkvsPaxos.PhaseTwoRequest request);
@@ -32,7 +32,8 @@ public abstract class PaxosState {
 		if (highestTimestamp == -1 || learnTimestamp > highestTimestamp) {
 			serverState.logSystem
 					.writeLog("[PAXOS (" + learnIndex + ")] Received request with higher timestamp than ours:\tResetting;");
-			num_responses = new AtomicInteger(0);
+			num_responses = new AtomicInteger(1);
+			highestTimestamp = learnTimestamp;
 		} else if (highestTimestamp > learnTimestamp) {
 			serverState.logSystem
 					.writeLog("[PAXOS (" + learnIndex + ")] Received request with lower timestamp than ours:\tRejecting");
@@ -40,11 +41,14 @@ public abstract class PaxosState {
 		} else {
 			serverState.logSystem
 					.writeLog("[PAXOS (" + learnIndex + ")] Received request with timestamp equal to ours:\tAccepting.");
-		}
-
-		if (accepted) {
-			serverState.logSystem.writeLog("Adding request: '" + learnReqid + "' with sequencer number: '" + learnIndex + "'");
-			serverState.addRequest(learnReqid, learnIndex);
+			
+			if (num_responses.get() < 2)
+				num_responses.incrementAndGet();
+			
+			if (num_responses.get() == 2) {
+				serverState.logSystem.writeLog("Adding request: '" + learnReqid + "' with sequencer number: '" + learnIndex + "'");
+				serverState.addRequest(learnReqid, learnIndex);
+			}
 		}
 
 		return DadkvsPaxos.LearnReply.newBuilder()

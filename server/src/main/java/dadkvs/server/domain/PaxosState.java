@@ -6,6 +6,9 @@ import dadkvs.server.DadkvsServerState;
 import dadkvs.DadkvsPaxos;
 import dadkvs.DadkvsPaxosServiceGrpc;
 import java.util.ArrayList;
+import java.util.concurrent.CountDownLatch;	
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import dadkvs.util.GenericResponseCollector;
 import dadkvs.util.CollectorStreamObserver;
@@ -79,14 +82,27 @@ public abstract class PaxosState {
 				.writeLog("[PAXOS (" + paxosIndex + ")] Sending Learn request to all Learners.");
 				serverState.logSystem
 				.writeLog("[PAXOS (" + paxosIndex + ")] Learn request - Configuration: " + serverState.configuration + " Value: " + acceptedValue + " Priority: " + priority);
-		for (int i = 0; i < serverState.n_servers; i++) {
-			CollectorStreamObserver<DadkvsPaxos.LearnReply> learn_observer = new CollectorStreamObserver<DadkvsPaxos.LearnReply>(learn_collector);
-			async_stubs[i].learn(request.build(), learn_observer);
-			try {
-				Thread.sleep(500);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
+		
+		int nServers = serverState.n_servers;
+		CountDownLatch latch = new CountDownLatch(nServers);
+		ExecutorService executor = Executors.newFixedThreadPool(nServers);
+
+		for (int i = 0; i < nServers; i++) {
+			final int index = i;
+			executor.submit(() -> {
+				CollectorStreamObserver<DadkvsPaxos.LearnReply> learn_observer = new CollectorStreamObserver<>(learn_collector);
+				async_stubs[index].learn(request.build(), learn_observer);
+				latch.countDown();
+			});
+		}
+
+		try {
+			latch.await();
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			e.printStackTrace();
+		} finally {
+			executor.shutdown();
 		}
 
 		serverState.logSystem

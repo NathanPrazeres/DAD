@@ -9,6 +9,9 @@ import java.util.ArrayList;
 import dadkvs.util.CollectorStreamObserver;
 import dadkvs.util.GenericResponseCollector;
 import io.grpc.ManagedChannel;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Proposer extends Acceptor {
 	private Sequencer _sequencer;
@@ -97,14 +100,31 @@ public class Proposer extends Acceptor {
 		GenericResponseCollector<DadkvsPaxos.PhaseOneReply> collector = new GenericResponseCollector<>(promise_responses,
 				acceptors.length);
 
+		int nAcceptors = acceptors.length;
+		CountDownLatch latch = new CountDownLatch(nAcceptors);
+		ExecutorService executor = Executors.newFixedThreadPool(nAcceptors);
+
 		for (int acceptor : acceptors) {
-			try {
-				CollectorStreamObserver<DadkvsPaxos.PhaseOneReply> observer = new CollectorStreamObserver<>(collector);
-				async_stubs[acceptor].phaseone(prepare.build(), observer);
-			} catch (RuntimeException e) {
-				this.serverState.logSystem.writeLog(
-						"Exception occurred while sending Prepare request to Acceptor " + acceptor + ": " + e.getMessage());
-			}
+			executor.submit(() -> {
+				try {
+					CollectorStreamObserver<DadkvsPaxos.PhaseOneReply> observer = new CollectorStreamObserver<>(collector);
+					async_stubs[acceptor].phaseone(prepare.build(), observer);
+				} catch (RuntimeException e) {
+					this.serverState.logSystem.writeLog(
+							"Exception occurred while sending Prepare request to Acceptor " + acceptor + ": " + e.getMessage());
+				} finally {
+					latch.countDown();
+				}
+			});
+		}
+
+		try {
+			latch.await();
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			e.printStackTrace();
+		} finally {
+			executor.shutdown();
 		}
 
 		int responsesNeeded = this.serverState.getQuorum(acceptors.length);

@@ -2,11 +2,11 @@ package dadkvs.server.domain;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import dadkvs.DadkvsMain;
 import dadkvs.server.DadkvsServerState;
 import dadkvs.DadkvsPaxos;
 import dadkvs.DadkvsPaxosServiceGrpc;
 import java.util.ArrayList;
+
 import dadkvs.util.GenericResponseCollector;
 import dadkvs.util.CollectorStreamObserver;
 
@@ -46,7 +46,7 @@ public abstract class PaxosState {
 				num_responses.incrementAndGet();
 			
 			if (num_responses.get() == 2) {
-				serverState.logSystem.writeLog("Adding request: '" + learnReqid + "' with sequencer number: '" + learnIndex + "'");
+				serverState.logSystem.writeLog("[PAXOS (" + learnIndex + ")] Adding request: '" + learnReqid + "' with sequencer number: '" + learnIndex + "'");
 				serverState.addRequest(learnReqid, learnIndex);
 			}
 		}
@@ -66,14 +66,6 @@ public abstract class PaxosState {
 
 	public abstract void demote();
 
-	public void resetResponseCounter() {
-		num_responses = new AtomicInteger(0);
-	}
-
-	public void addResponseToCounter() {
-		num_responses.incrementAndGet();
-	}
-
 	public void sendLearnRequest(int paxosIndex, int priority, int acceptedValue, DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[] async_stubs) {
 		serverState.logSystem
 				.writeLog("[PAXOS (" + paxosIndex + ")]\t\tSTARTING LEARN PHASE.");
@@ -85,9 +77,16 @@ public abstract class PaxosState {
 
 		serverState.logSystem
 				.writeLog("[PAXOS (" + paxosIndex + ")] Sending Learn request to all Learners.");
+				serverState.logSystem
+				.writeLog("[PAXOS (" + paxosIndex + ")] Learn request - Configuration: " + serverState.configuration + " Value: " + acceptedValue + " Priority: " + priority);
 		for (int i = 0; i < serverState.n_servers; i++) {
 			CollectorStreamObserver<DadkvsPaxos.LearnReply> learn_observer = new CollectorStreamObserver<DadkvsPaxos.LearnReply>(learn_collector);
 			async_stubs[i].learn(request.build(), learn_observer);
+			try {
+				Thread.sleep(500);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
 		}
 
 		serverState.logSystem

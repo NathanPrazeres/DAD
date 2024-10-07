@@ -1,22 +1,19 @@
 package dadkvs.server.domain;
 
-import dadkvs.DadkvsMain;
 import dadkvs.server.DadkvsServerState;
-import dadkvs.server.TransactionRecord;
 import dadkvs.DadkvsPaxos;
-import java.util.ArrayList;
-import dadkvs.util.CollectorStreamObserver;
-import dadkvs.util.GenericResponseCollector;
 import dadkvs.DadkvsPaxosServiceGrpc;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Acceptor extends PaxosState {
-	private int acceptedValue = -1;
+						    // (Index, Value)
+	private ConcurrentHashMap<Integer, Integer> _paxosInstance  = new ConcurrentHashMap<>();
 	private int n_servers = 5;
 	private int _priority;
 	ManagedChannel[] channels;
-	private DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[] async_stubs;
+	public DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[] async_stubs;
 
 	public void setServerState(DadkvsServerState serverState) {
 		this.serverState = serverState;
@@ -33,17 +30,25 @@ public class Acceptor extends PaxosState {
 
 		if (proposalTimestamp > highestTimestamp) {
 			this.serverState.logSystem
-					.writeLog("[PAXOS (" + proposalIndex + ")] Proposer's timestamp was higher than ours:\tAccepting.");
+					.writeLog("[PAXOS (" + proposalIndex + ")]\t\tProposer's timestamp was higher than ours: " + proposalTimestamp + "\tAccepting.");
 			// accept value
+			highestTimestamp = proposalTimestamp;
+
+			if (_paxosInstance.get(proposalIndex) == null) {
+				_paxosInstance.put(proposalIndex, -1);
+			}
+
+			this.serverState.logSystem
+					.writeLog("[PAXOS (" + proposalIndex + ")] Replying with value: " + _paxosInstance.get(proposalIndex));
+
 			DadkvsPaxos.PhaseOneReply response = DadkvsPaxos.PhaseOneReply.newBuilder()
 					.setPhase1Config(proposalConfig)
 					.setPhase1Index(proposalIndex)
 					.setPhase1Accepted(true)
-					.setPhase1Value(acceptedValue)
+					.setPhase1Value(_paxosInstance.get(proposalIndex))
 					.setPhase1Timestamp(highestTimestamp)
 					.build();
 
-			highestTimestamp = proposalTimestamp;
 
 			return response;
 		} else {
@@ -75,7 +80,7 @@ public class Acceptor extends PaxosState {
 					.writeLog("[PAXOS (" + proposalIndex + ")] Proposer's timestamp was higher/equal to ours:\tAccepting.");
 
 			_priority = proposalTimestamp;
-			acceptedValue = proposalValue;
+			_paxosInstance.put(proposalIndex, proposalValue);
 
 			// Respond that the proposal was accepted
 			DadkvsPaxos.PhaseTwoReply response = DadkvsPaxos.PhaseTwoReply.newBuilder()
@@ -85,7 +90,7 @@ public class Acceptor extends PaxosState {
 					.build();
 
 			// acceptors should trigger the learn request once they accept a value
-			sendLearnRequest(proposalIndex, _priority, acceptedValue, async_stubs);
+			sendLearnRequest(proposalIndex, _priority, _paxosInstance.get(proposalIndex), async_stubs);
 
 			return response;
 		} else {
@@ -117,7 +122,7 @@ public class Acceptor extends PaxosState {
 		this.serverState.changePaxosState(new Learner());
 	}
 
-	private void initPaxosComms() {
+	public void initPaxosComms() {
 		// set servers
 		String[] targets = new String[n_servers];
 
@@ -142,7 +147,7 @@ public class Acceptor extends PaxosState {
 		this.serverState.logSystem.writeLog("Opened Stubs for PAXOS communication.");
 	}
 
-	private void terminateComms() {
+	public void terminateComms() {
 		for (int i = 0; i < n_servers; i++) {
 			channels[i].shutdownNow();
 		}

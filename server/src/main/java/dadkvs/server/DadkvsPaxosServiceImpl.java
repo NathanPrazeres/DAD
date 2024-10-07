@@ -39,6 +39,7 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 			responseObserver.onNext(server_state.paxosState.handleLearnRequest(request));
 		} catch (Exception e) {
 			server_state.logSystem.writeLog("Error: " + e.getMessage());
+			e.printStackTrace();
 			System.exit(0);
 		}
 		responseObserver.onCompleted();

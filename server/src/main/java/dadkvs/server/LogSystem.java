@@ -66,7 +66,8 @@ public class LogSystem {
                 LocalDateTime currentDateTime = LocalDateTime.now();
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
                 String formattedTime = currentDateTime.format(formatter);
-                pw.println("[" + formattedTime + "] " + content);
+                Thread currentThread = Thread.currentThread();
+                pw.println("[" + formattedTime + " - " + currentThread.getName() + "] " + content);
             } catch (IOException e) {
                 System.err.println("An error occurred while writing to the file: " + e.getMessage());
             }

@@ -1,30 +1,31 @@
 package dadkvs.server.domain;
 
-import dadkvs.server.DadkvsServerState;
+import java.util.concurrent.ConcurrentHashMap;
+
 import dadkvs.DadkvsPaxos;
 import dadkvs.DadkvsPaxosServiceGrpc;
+import dadkvs.server.DadkvsServerState;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class Acceptor extends PaxosState {
 	// (Index, Value)
-	private ConcurrentHashMap<Integer, Integer> _paxosInstance = new ConcurrentHashMap<>();
-	private int nServers = 5;
+	private final ConcurrentHashMap<Integer, Integer> _paxosInstance = new ConcurrentHashMap<>();
+	private final int nServers = 5;
 	private int _priority;
 	ManagedChannel[] channels;
 	public DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[] asyncStubs;
 
-	public void setServerState(DadkvsServerState serverState) {
+	public void setServerState(final DadkvsServerState serverState) {
 		this.serverState = serverState;
 		_priority = this.serverState.myId(); // So that server 0 has the lowest and 4 has the highest base priority
 		initPaxosComms();
 	}
 
-	public DadkvsPaxos.PhaseOneReply handlePrepareRequest(DadkvsPaxos.PhaseOneRequest request) {
-		int proposalConfig = request.getPhase1Config();
-		int proposalIndex = request.getPhase1Index();
-		int proposalTimestamp = request.getPhase1Timestamp();
+	public DadkvsPaxos.PhaseOneReply handlePrepareRequest(final DadkvsPaxos.PhaseOneRequest request) {
+		final int proposalConfig = request.getPhase1Config();
+		final int proposalIndex = request.getPhase1Index();
+		final int proposalTimestamp = request.getPhase1Timestamp();
 
 		this.serverState.logSystem.writeLog("[PAXOS (" + proposalIndex + ")]\t\tRECEIVED PREPARE.");
 
@@ -42,7 +43,7 @@ public class Acceptor extends PaxosState {
 			this.serverState.logSystem
 					.writeLog("[PAXOS (" + proposalIndex + ")] Replying with value: " + _paxosInstance.get(proposalIndex));
 
-			DadkvsPaxos.PhaseOneReply response = DadkvsPaxos.PhaseOneReply.newBuilder()
+			final DadkvsPaxos.PhaseOneReply response = DadkvsPaxos.PhaseOneReply.newBuilder()
 					.setPhase1Config(proposalConfig)
 					.setPhase1Index(proposalIndex)
 					.setPhase1Accepted(true)
@@ -55,7 +56,7 @@ public class Acceptor extends PaxosState {
 			this.serverState.logSystem
 					.writeLog("[PAXOS (" + proposalIndex + ")] Proposer's timestamp was lower than ours:\tRejecting.");
 			// reject value
-			DadkvsPaxos.PhaseOneReply response = DadkvsPaxos.PhaseOneReply.newBuilder()
+			final DadkvsPaxos.PhaseOneReply response = DadkvsPaxos.PhaseOneReply.newBuilder()
 					.setPhase1Config(proposalConfig)
 					.setPhase1Index(proposalIndex)
 					.setPhase1Accepted(false)
@@ -65,11 +66,11 @@ public class Acceptor extends PaxosState {
 		}
 	}
 
-	public DadkvsPaxos.PhaseTwoReply handleAcceptRequest(DadkvsPaxos.PhaseTwoRequest request) {
-		int proposalConfig = request.getPhase2Config();
-		int proposalIndex = request.getPhase2Index();
-		int proposalValue = request.getPhase2Value();
-		int proposalTimestamp = request.getPhase2Timestamp();
+	public DadkvsPaxos.PhaseTwoReply handleAcceptRequest(final DadkvsPaxos.PhaseTwoRequest request) {
+		final int proposalConfig = request.getPhase2Config();
+		final int proposalIndex = request.getPhase2Index();
+		final int proposalValue = request.getPhase2Value();
+		final int proposalTimestamp = request.getPhase2Timestamp();
 
 		this.serverState.logSystem.writeLog("[PAXOS (" + proposalIndex + ")]\t\tRECEIVED ACCEPT.");
 
@@ -83,7 +84,7 @@ public class Acceptor extends PaxosState {
 			_paxosInstance.put(proposalIndex, proposalValue);
 
 			// Respond that the proposal was accepted
-			DadkvsPaxos.PhaseTwoReply response = DadkvsPaxos.PhaseTwoReply.newBuilder()
+			final DadkvsPaxos.PhaseTwoReply response = DadkvsPaxos.PhaseTwoReply.newBuilder()
 					.setPhase2Config(proposalConfig)
 					.setPhase2Index(proposalIndex)
 					.setPhase2Accepted(true)
@@ -97,7 +98,7 @@ public class Acceptor extends PaxosState {
 			this.serverState.logSystem
 					.writeLog("[PAXOS (" + proposalIndex + ")] Proposer's timestamp was lower than ours:\tRejecting.");
 			// Reject if a higher proposal has already been seen
-			DadkvsPaxos.PhaseTwoReply response = DadkvsPaxos.PhaseTwoReply.newBuilder()
+			final DadkvsPaxos.PhaseTwoReply response = DadkvsPaxos.PhaseTwoReply.newBuilder()
 					.setPhase2Config(proposalConfig)
 					.setPhase2Index(proposalIndex)
 					.setPhase2Accepted(false)
@@ -107,7 +108,7 @@ public class Acceptor extends PaxosState {
 		}
 	}
 
-	public void handleCommittx(int reqId) {
+	public void handleCommittx(final int reqId) {
 		// Acceptor does nothing
 	}
 
@@ -124,10 +125,10 @@ public class Acceptor extends PaxosState {
 
 	public void initPaxosComms() {
 		// set servers
-		String[] targets = new String[nServers];
+		final String[] targets = new String[nServers];
 
 		for (int i = 0; i < nServers; i++) {
-			int targetPort = this.serverState.basePort + i;
+			final int targetPort = this.serverState.basePort + i;
 			targets[i] = new String();
 			targets[i] = "localhost:" + targetPort;
 			System.out.printf("targets[%d] = %s%n", i, targets[i]);

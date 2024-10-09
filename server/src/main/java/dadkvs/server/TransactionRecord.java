@@ -19,7 +19,7 @@ public class TransactionRecord {
 		this.timestamp = -1;
 	}
 
-	public TransactionRecord(int key1, int v1, int key2, int v2, int wkey, int wval) {
+	public TransactionRecord(final int key1, final int v1, final int key2, final int v2, final int wkey, final int wval) {
 		this.read1Key = key1;
 		this.read1Version = v1;
 		this.read2Key = key2;
@@ -29,7 +29,8 @@ public class TransactionRecord {
 		this.timestamp = -1;
 	}
 
-	public TransactionRecord(int key1, int v1, int key2, int v2, int wkey, int wval, int ts) {
+	public TransactionRecord(final int key1, final int v1, final int key2, final int v2, final int wkey, final int wval,
+			final int ts) {
 		this.read1Key = key1;
 		this.read1Version = v1;
 		this.read2Key = key2;
@@ -44,7 +45,7 @@ public class TransactionRecord {
 		return timestamp;
 	}
 
-	public void setTimestamp(int timestamp) {
+	public void setTimestamp(final int timestamp) {
 		this.timestamp = timestamp;
 	}
 
@@ -52,7 +53,7 @@ public class TransactionRecord {
 		return read1Key;
 	}
 
-	public void setRead1Key(int read1Key) {
+	public void setRead1Key(final int read1Key) {
 		this.read1Key = read1Key;
 	}
 
@@ -60,7 +61,7 @@ public class TransactionRecord {
 		return read1Version;
 	}
 
-	public void setRead1Version(int read1Version) {
+	public void setRead1Version(final int read1Version) {
 		this.read1Version = read1Version;
 	}
 
@@ -68,7 +69,7 @@ public class TransactionRecord {
 		return read2Key;
 	}
 
-	public void setRead2Key(int read2Key) {
+	public void setRead2Key(final int read2Key) {
 		this.read2Key = read2Key;
 	}
 
@@ -76,7 +77,7 @@ public class TransactionRecord {
 		return read2Version;
 	}
 
-	public void setRead2Version(int read2Version) {
+	public void setRead2Version(final int read2Version) {
 		this.read2Version = read2Version;
 	}
 
@@ -84,7 +85,7 @@ public class TransactionRecord {
 		return prepareKey;
 	}
 
-	public void setPrepareKey(int prepareKey) {
+	public void setPrepareKey(final int prepareKey) {
 		this.prepareKey = prepareKey;
 	}
 
@@ -92,7 +93,7 @@ public class TransactionRecord {
 		return prepareValue;
 	}
 
-	public void setPrepareValue(int prepareValue) {
+	public void setPrepareValue(final int prepareValue) {
 		this.prepareValue = prepareValue;
 	}
 }

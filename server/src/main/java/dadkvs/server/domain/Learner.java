@@ -1,29 +1,32 @@
 package dadkvs.server.domain;
 
-import dadkvs.DadkvsMain;
-import dadkvs.server.DadkvsServerState;
-import dadkvs.server.TransactionRecord;
 import dadkvs.DadkvsPaxos;
+import dadkvs.server.DadkvsServerState;
 
 public class Learner extends PaxosState {
-	public void setServerState(DadkvsServerState serverState) {
+	public void setServerState(final DadkvsServerState serverState) {
 		this.serverState = serverState;
 	}
 
-	public DadkvsPaxos.PhaseOneReply handlePrepareRequest(DadkvsPaxos.PhaseOneRequest request) {
+	public DadkvsPaxos.PhaseOneReply handlePrepareRequest(final DadkvsPaxos.PhaseOneRequest request) {
 		return null;
 	}
 
-	public DadkvsPaxos.PhaseTwoReply handleAcceptRequest(DadkvsPaxos.PhaseTwoRequest request) {
+	public DadkvsPaxos.PhaseTwoReply handleAcceptRequest(final DadkvsPaxos.PhaseTwoRequest request) {
 		return null;
 	}
 
-	public void handleCommittx(int reqId) {
+	public void handleCommittx(final int reqId) {
 		// Learner does nothing
 	}
 
 	public void promote() {
 		this.serverState.changePaxosState(new Acceptor());
+	}
+
+	@Override
+	public String toString() {
+		return "Learner []";
 	}
 
 	public void demote() {

@@ -3,9 +3,6 @@ package dadkvs.server;
 import dadkvs.server.domain.PaxosState;
 import dadkvs.server.domain.Learner;
 import dadkvs.server.domain.Acceptor;
-import dadkvs.DadkvsPaxosServiceGrpc;
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 
 public class DadkvsServerState {
 	boolean iAmLeader;
@@ -19,14 +16,14 @@ public class DadkvsServerState {
 	boolean frozen;
 	Object freezeLock;
 
-	private Queue _queue;
-	private PaxosQueue _paxosQueue;
+	private final Queue _queue;
+	private final PaxosQueue _paxosQueue;
 
 	public PaxosState paxosState;
 	public LogSystem logSystem;
 	public int configuration;
 
-	public DadkvsServerState(int kv_size, int port, int myself) {
+	public DadkvsServerState(final int kv_size, final int port, final int myself) {
 		basePort = port;
 		nServers = 5;
 		myId = myself;
@@ -65,6 +62,7 @@ public class DadkvsServerState {
 				// Crash the _server
 				System.out.println("Debug mode 1: Crash the server.");
 				// just brute forcing for now
+				// FIXME: maybe close stubs
 				System.exit(0);
 				break;
 			case 2:
@@ -108,22 +106,22 @@ public class DadkvsServerState {
 		return configuration;
 	}
 
-	public <T extends PaxosState> void changePaxosState(T newState) {
+	public <T extends PaxosState> void changePaxosState(final T newState) {
 		logSystem.writeLog("Changed paxos state from " + paxosState.getClass().getSimpleName() + " to "
 				+ newState.getClass().getSimpleName());
 		paxosState = newState;
 		paxosState.setServerState(this);
 	}
 
-	public int getSequenceNumber(int reqId) {
+	public int getSequenceNumber(final int reqId) {
 		return _paxosQueue.getSequenceNumber(reqId);
 	}
 
-	public void addRequest(int reqId, int seqNumber) {
+	public void addRequest(final int reqId, final int seqNumber) {
 		_paxosQueue.addRequest(reqId, seqNumber);
 	}
 
-	public void waitInLine(int queueNumber) {
+	public void waitInLine(final int queueNumber) {
 		_queue.waitForQueueNumber(queueNumber);
 	}
 
@@ -131,7 +129,7 @@ public class DadkvsServerState {
 		_queue.incrementQueueNumber();
 	}
 
-	public int getQuorum(int nAcceptors) {
+	public int getQuorum(final int nAcceptors) {
 		return (int) Math.floor(nAcceptors / 2) + 1;
 	}
 }

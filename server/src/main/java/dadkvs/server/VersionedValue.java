@@ -4,7 +4,7 @@ public class VersionedValue {
 	private int value;
 	private int version;
 
-	public VersionedValue(int val, int ver) {
+	public VersionedValue(final int val, final int ver) {
 		this.value = val;
 		this.version = ver;
 	}
@@ -13,7 +13,7 @@ public class VersionedValue {
 		return value;
 	}
 
-	public void setValue(int value) {
+	public void setValue(final int value) {
 		this.value = value;
 	}
 
@@ -21,7 +21,7 @@ public class VersionedValue {
 		return version;
 	}
 
-	public void setVersion(int version) {
+	public void setVersion(final int version) {
 		this.version = version;
 	}
 }

@@ -1,14 +1,11 @@
 package dadkvs.server;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.time.LocalTime;
 import java.io.PrintWriter;
-import java.io.IOException;
-import java.io.File;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,26 +15,26 @@ public class LogSystem {
 
 	private final Object lock = new Object();
 
-	public LogSystem(String serverIP, int logRotation) {
-		LocalDateTime currentDateTime = LocalDateTime.now();
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd|MM|yyyy-HH:mm:ss");
-		String formattedDateTime = currentDateTime.format(formatter);
+	public LogSystem(final String serverIP, final int logRotation) {
+		final LocalDateTime currentDateTime = LocalDateTime.now();
+		final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd|MM|yyyy-HH:mm:ss");
+		final String formattedDateTime = currentDateTime.format(formatter);
 
 		_currentSessionPath = serverIP + "-" + formattedDateTime + ".txt";
 		System.out.println("Current log session: " + _currentSessionPath);
 
-		File folder = new File(_logsPath);
+		final File folder = new File(_logsPath);
 		synchronized (lock) {
 			if (!folder.exists()) {
 				folder.mkdir();
 			}
 		}
 
-		List<File> myLogs = new ArrayList<>();
-		File[] fileList = folder.listFiles();
+		final List<File> myLogs = new ArrayList<>();
+		final File[] fileList = folder.listFiles();
 		if (fileList != null) {
 			System.out.println("Existing logs:");
-			for (File file : fileList) {
+			for (final File file : fileList) {
 				if (file.isFile() && file.getName().startsWith(serverIP)) {
 					System.out.println(file.getName());
 					myLogs.add(file);
@@ -47,7 +44,7 @@ public class LogSystem {
 
 		if (myLogs.size() + 1 > logRotation) {
 			for (int i = logRotation - 1; i < myLogs.size(); i++) {
-				File fileToDelete = myLogs.get(i);
+				final File fileToDelete = myLogs.get(i);
 				if (fileToDelete.delete()) {
 					System.out.println("Deleted log file: " + fileToDelete.getName());
 				} else {
@@ -57,16 +54,16 @@ public class LogSystem {
 		}
 	}
 
-	public void writeLog(String content) {
+	public void writeLog(final String content) {
 		synchronized (lock) {
 			try (FileWriter fw = new FileWriter(_logsPath + "/" + _currentSessionPath, true);
 					PrintWriter pw = new PrintWriter(fw)) {
-				LocalDateTime currentDateTime = LocalDateTime.now();
-				DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
-				String formattedTime = currentDateTime.format(formatter);
-				Thread currentThread = Thread.currentThread();
+				final LocalDateTime currentDateTime = LocalDateTime.now();
+				final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
+				final String formattedTime = currentDateTime.format(formatter);
+				final Thread currentThread = Thread.currentThread();
 				pw.println("[" + formattedTime + " - " + currentThread.getName() + "] " + content);
-			} catch (IOException e) {
+			} catch (final IOException e) {
 				System.err.println("An error occurred while writing to the file: " + e.getMessage());
 			}
 		}

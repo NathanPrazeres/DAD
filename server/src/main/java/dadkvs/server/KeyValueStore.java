@@ -1,10 +1,10 @@
 package dadkvs.server;
 
 public class KeyValueStore {
-	private int size;
-	private VersionedValue[] values;
+	private final int size;
+	private final VersionedValue[] values;
 
-	public KeyValueStore(int n_entries) {
+	public KeyValueStore(final int n_entries) {
 		this.size = n_entries;
 		this.values = new VersionedValue[n_entries];
 		for (int i = 0; i < n_entries; i++) {
@@ -12,7 +12,7 @@ public class KeyValueStore {
 		}
 	}
 
-	synchronized public VersionedValue read(int k) {
+	synchronized public VersionedValue read(final int k) {
 		if (k < size) {
 			return values[k];
 		} else {
@@ -20,7 +20,7 @@ public class KeyValueStore {
 		}
 	}
 
-	synchronized public boolean write(int k, VersionedValue v) {
+	synchronized public boolean write(final int k, final VersionedValue v) {
 		if (k < size) {
 			values[k] = v;
 			return true;
@@ -28,7 +28,7 @@ public class KeyValueStore {
 			return false;
 	}
 
-	synchronized public boolean commit(TransactionRecord tr) {
+	synchronized public boolean commit(final TransactionRecord tr) {
 		System.out.println("store commit read first key = " + tr.getRead1Key() + " with version = " + tr.getRead1Version()
 				+ "  and current version = " + this.read(tr.getRead1Key()).getVersion());
 		System.out.println("store commit read second key = " + tr.getRead2Key() + " with version = " + tr.getRead2Version()
@@ -37,7 +37,7 @@ public class KeyValueStore {
 				+ " and version " + tr.getTimestamp());
 		if (this.read(tr.getRead1Key()).getVersion() == tr.getRead1Version() &&
 				this.read(tr.getRead2Key()).getVersion() == tr.getRead2Version()) {
-			VersionedValue vv = new VersionedValue(tr.getPrepareValue(), tr.getTimestamp());
+			final VersionedValue vv = new VersionedValue(tr.getPrepareValue(), tr.getTimestamp());
 			this.write(tr.getPrepareKey(), vv);
 			return true;
 		} else {
@@ -47,7 +47,7 @@ public class KeyValueStore {
 
 	@Override
 	public String toString() {
-		StringBuilder vals = new StringBuilder();
+		final StringBuilder vals = new StringBuilder();
 		for (int i = 0; i < size; i++) {
 			if (values[i].getVersion() != 0) {
 				vals.append("Key: " + i + " Value: " + values[i].getValue() + " Version: " + values[i].getVersion() + "\n");

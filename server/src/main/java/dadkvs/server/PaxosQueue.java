@@ -1,16 +1,16 @@
 package dadkvs.server;
 
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class PaxosQueue {
-	private ConcurrentHashMap<Integer, Integer> _requestMap = new ConcurrentHashMap<>();
+	private final ConcurrentHashMap<Integer, Integer> _requestMap = new ConcurrentHashMap<>();
 	private final Lock _waitQueueLock = new ReentrantLock();
 	private final Condition _waitQueueCondition = _waitQueueLock.newCondition();
 
-	public int getSequenceNumber(int reqid) {
+	public int getSequenceNumber(final int reqid) {
 		Integer seqNumber = _requestMap.get(reqid);
 
 		while (seqNumber == null) {
@@ -19,7 +19,7 @@ public class PaxosQueue {
 				while (_requestMap.get(reqid) == null) {
 					try {
 						_waitQueueCondition.await();
-					} catch (InterruptedException e) {
+					} catch (final InterruptedException e) {
 						Thread.currentThread().interrupt();
 						throw new RuntimeException(e);
 					}
@@ -32,7 +32,7 @@ public class PaxosQueue {
 		return seqNumber;
 	}
 
-	public void addRequest(int reqId, int seqNumber) {
+	public void addRequest(final int reqId, final int seqNumber) {
 		_requestMap.put(reqId, seqNumber);
 		_waitQueueLock.lock();
 		try {

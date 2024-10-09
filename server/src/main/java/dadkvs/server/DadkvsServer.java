@@ -1,19 +1,8 @@
 package dadkvs.server;
 
-import java.util.ArrayList;
-
 import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
-
-import dadkvs.DadkvsMain;
-import dadkvs.DadkvsFastPaxosServiceGrpc;
-import dadkvs.DadkvsFastPaxos;
-
-import dadkvs.util.GenericResponseCollector;
-import dadkvs.util.CollectorStreamObserver;
 
 public class DadkvsServer {
 
@@ -22,7 +11,7 @@ public class DadkvsServer {
 	/** Server host port. */
 	private static int port;
 
-	public static void main(String[] args) throws Exception {
+	public static void main(final String[] args) throws Exception {
 		final int kvsize = 1000;
 
 		System.out.println(DadkvsServer.class.getSimpleName());
@@ -40,8 +29,8 @@ public class DadkvsServer {
 			return;
 		}
 
-		int basePort = Integer.valueOf(args[0]);
-		int myId = Integer.valueOf(args[1]);
+		final int basePort = Integer.valueOf(args[0]);
+		final int myId = Integer.valueOf(args[1]);
 
 		serverState = new DadkvsServerState(kvsize, basePort, myId);
 
@@ -52,7 +41,8 @@ public class DadkvsServer {
 		final BindableService paxosImpl = new DadkvsPaxosServiceImpl(serverState);
 
 		// Create a new server to listen on port.
-		Server server = ServerBuilder.forPort(port).addService(serviceImpl).addService(consoleImpl).addService(paxosImpl)
+		final Server server = ServerBuilder.forPort(port).addService(serviceImpl).addService(consoleImpl)
+				.addService(paxosImpl)
 				.build();
 		// Start the server.
 		server.start();

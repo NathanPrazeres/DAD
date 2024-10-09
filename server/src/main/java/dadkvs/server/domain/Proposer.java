@@ -1,21 +1,21 @@
 package dadkvs.server.domain;
 
-import dadkvs.DadkvsPaxos;
-import dadkvs.server.DadkvsServerState;
-import dadkvs.server.Sequencer;
-
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.ArrayList;
-import dadkvs.util.CollectorStreamObserver;
-import dadkvs.util.GenericResponseCollector;
-import io.grpc.ManagedChannel;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import dadkvs.DadkvsPaxos;
+import dadkvs.server.DadkvsServerState;
+import dadkvs.server.Sequencer;
+import dadkvs.util.CollectorStreamObserver;
+import dadkvs.util.GenericResponseCollector;
+import io.grpc.ManagedChannel;
+
 public class Proposer extends Acceptor {
-	private Sequencer _sequencer;
-	private ConcurrentLinkedQueue<Integer> _requestQueue;
+	private final Sequencer _sequencer;
+	private final ConcurrentLinkedQueue<Integer> _requestQueue;
 	private int _priority;
 	private int _reqId;
 	ManagedChannel[] channels;
@@ -26,25 +26,21 @@ public class Proposer extends Acceptor {
 		_sequencer = new Sequencer();
 	}
 
-	public void setServerState(DadkvsServerState serverState) {
+	public void setServerState(final DadkvsServerState serverState) {
 		this.serverState = serverState;
 		_priority = this.serverState.myId(); // So that server 0 has the lowest and 4 has the highest base priority
 		initPaxosComms();
 	}
 
 	// public void handlePromiseRequest();
-	public void handleCommittx(int reqId) {
+	public void handleCommittx(final int reqId) {
 		this.serverState.logSystem.writeLog("Handling commit request with Request ID: " + reqId);
 		_requestQueue.add(reqId);
-		int seqNumber = _sequencer.getSequenceNumber();
+		final int seqNumber = _sequencer.getSequenceNumber();
 		runPaxos(seqNumber);
 	}
 
-	private void setNewTimestamp() {
-		_priority += this.serverState.getNumberOfServers();
-	}
-
-	public boolean runPaxos(int seqNum) {
+	public boolean runPaxos(final int seqNum) {
 		this.serverState.logSystem.writeLog("Starting [PAXOS(" + seqNum + ")]...");
 		try {
 			while (true) {
@@ -58,18 +54,18 @@ public class Proposer extends Acceptor {
 				this.serverState.logSystem.writeLog("Ending [PAXOS(" + seqNum + ")]...");
 				break;
 			}
-		} catch (RuntimeException e) {
+		} catch (final RuntimeException e) {
 			this.serverState.logSystem.writeLog("Exception occurred while running Paxos: " + e.getMessage());
 			return false;
 		}
 		return true;
 	}
 
-	public int extractHighestProposedValue(ArrayList<DadkvsPaxos.PhaseOneReply> phase1Responses, int seqNum) {
+	public int extractHighestProposedValue(final ArrayList<DadkvsPaxos.PhaseOneReply> phase1Responses, final int seqNum) {
 		int value = -1;
 		int i = 0;
 		int highestTimestamp = -1;
-		for (DadkvsPaxos.PhaseOneReply response : phase1Responses) {
+		for (final DadkvsPaxos.PhaseOneReply response : phase1Responses) {
 			if (response.getPhase1Value() != -1) {
 				if (response.getPhase1Timestamp() > highestTimestamp) {
 					highestTimestamp = response.getPhase1Timestamp();
@@ -86,32 +82,46 @@ public class Proposer extends Acceptor {
 		return value;
 	}
 
-	private boolean runPhaseOne(int seqNum) {
+	public void promote() {
+		// proposer can't be promoted
+	}
+
+	public void demote() {
+		terminateComms();
+		this.serverState.changePaxosState(new Acceptor());
+	}
+
+	private void setNewTimestamp() {
+		_priority += this.serverState.getNumberOfServers();
+	}
+
+	private boolean runPhaseOne(final int seqNum) {
 		this.serverState.logSystem
 				.writeLog("[PAXOS (" + seqNum + ")]\t\tSTARTING PHASE ONE.");
-		int[] acceptors = new int[] { 0, 1, 2 };
+		final int[] acceptors = new int[] { 0, 1, 2 };
 
 		this.serverState.logSystem
 				.writeLog("[PAXOS (" + seqNum + ")]\t\tSENDING PREPARES.");
 
-		DadkvsPaxos.PhaseOneRequest.Builder prepare = DadkvsPaxos.PhaseOneRequest.newBuilder()
+		final DadkvsPaxos.PhaseOneRequest.Builder prepare = DadkvsPaxos.PhaseOneRequest.newBuilder()
 				.setPhase1Index(seqNum)
 				.setPhase1Config(this.serverState.getConfiguration())
 				.setPhase1Timestamp(_priority);
-		ArrayList<DadkvsPaxos.PhaseOneReply> promiseResponses = new ArrayList<>();
-		GenericResponseCollector<DadkvsPaxos.PhaseOneReply> collector = new GenericResponseCollector<>(promiseResponses,
+		final ArrayList<DadkvsPaxos.PhaseOneReply> promiseResponses = new ArrayList<>();
+		final GenericResponseCollector<DadkvsPaxos.PhaseOneReply> collector = new GenericResponseCollector<>(
+				promiseResponses,
 				acceptors.length);
 
-		int nAcceptors = acceptors.length;
-		CountDownLatch latch = new CountDownLatch(nAcceptors);
-		ExecutorService executor = Executors.newFixedThreadPool(nAcceptors);
+		final int nAcceptors = acceptors.length;
+		final CountDownLatch latch = new CountDownLatch(nAcceptors);
+		final ExecutorService executor = Executors.newFixedThreadPool(nAcceptors);
 
-		for (int acceptor : acceptors) {
+		for (final int acceptor : acceptors) {
 			executor.submit(() -> {
 				try {
-					CollectorStreamObserver<DadkvsPaxos.PhaseOneReply> observer = new CollectorStreamObserver<>(collector);
+					final CollectorStreamObserver<DadkvsPaxos.PhaseOneReply> observer = new CollectorStreamObserver<>(collector);
 					asyncStubs[acceptor].phaseone(prepare.build(), observer);
-				} catch (RuntimeException e) {
+				} catch (final RuntimeException e) {
 					this.serverState.logSystem.writeLog(
 							"Exception occurred while sending Prepare request to Acceptor " + acceptor + ": " + e.getMessage());
 				} finally {
@@ -122,22 +132,22 @@ public class Proposer extends Acceptor {
 
 		try {
 			latch.await();
-		} catch (InterruptedException e) {
+		} catch (final InterruptedException e) {
 			Thread.currentThread().interrupt();
 			e.printStackTrace();
 		} finally {
 			executor.shutdown();
 		}
 
-		int responsesNeeded = this.serverState.getQuorum(acceptors.length);
+		final int responsesNeeded = this.serverState.getQuorum(acceptors.length);
 		try {
 			collector.waitForTarget(responsesNeeded);
-		} catch (RuntimeException e) {
+		} catch (final RuntimeException e) {
 			this.serverState.logSystem.writeLog("Exception occurred during Phase 1: " + e.getCause().getMessage());
 		}
 
 		if (promiseResponses.size() >= responsesNeeded) {
-			boolean hasNaks = promiseResponses.stream().anyMatch(response -> !response.getPhase1Accepted());
+			final boolean hasNaks = promiseResponses.stream().anyMatch(response -> !response.getPhase1Accepted());
 			if (!hasNaks) {
 				_reqId = extractHighestProposedValue(promiseResponses, seqNum);
 				if (_reqId == -1) {
@@ -156,43 +166,44 @@ public class Proposer extends Acceptor {
 		return false;
 	}
 
-	private boolean runPhaseTwo(int seqNum) {
+	private boolean runPhaseTwo(final int seqNum) {
 		this.serverState.logSystem
 				.writeLog("[PAXOS (" + seqNum + ")]\t\tSTARTING PHASE TWO.");
-		int[] acceptors = new int[] { 0, 1, 2 };
+		final int[] acceptors = new int[] { 0, 1, 2 };
 
 		this.serverState.logSystem
 				.writeLog("[PAXOS (" + seqNum + ")]\t\tSENDING ACCEPT - " + "Value: " + _reqId + " Priority: " + _priority);
 
-		DadkvsPaxos.PhaseTwoRequest.Builder accept = DadkvsPaxos.PhaseTwoRequest.newBuilder()
+		final DadkvsPaxos.PhaseTwoRequest.Builder accept = DadkvsPaxos.PhaseTwoRequest.newBuilder()
 				.setPhase2Config(this.serverState.getConfiguration())
 				.setPhase2Index(seqNum)
 				.setPhase2Value(_reqId)
 				.setPhase2Timestamp(_priority);
 
-		ArrayList<DadkvsPaxos.PhaseTwoReply> acceptedResponses = new ArrayList<>();
-		GenericResponseCollector<DadkvsPaxos.PhaseTwoReply> collector = new GenericResponseCollector<>(acceptedResponses,
+		final ArrayList<DadkvsPaxos.PhaseTwoReply> acceptedResponses = new ArrayList<>();
+		final GenericResponseCollector<DadkvsPaxos.PhaseTwoReply> collector = new GenericResponseCollector<>(
+				acceptedResponses,
 				acceptors.length);
 
-		for (int acceptor : acceptors) {
+		for (final int acceptor : acceptors) {
 			try {
-				CollectorStreamObserver<DadkvsPaxos.PhaseTwoReply> observer = new CollectorStreamObserver<>(collector);
+				final CollectorStreamObserver<DadkvsPaxos.PhaseTwoReply> observer = new CollectorStreamObserver<>(collector);
 				asyncStubs[acceptor].phasetwo(accept.build(), observer);
-			} catch (RuntimeException e) {
+			} catch (final RuntimeException e) {
 				this.serverState.logSystem.writeLog(
 						"Exception occurred while sending Phase 2 request to acceptor " + acceptor + ": " + e.getMessage());
 			}
 		}
 
-		int responsesNeeded = this.serverState.getQuorum(acceptors.length);
+		final int responsesNeeded = this.serverState.getQuorum(acceptors.length);
 		try {
 			collector.waitForTarget(responsesNeeded);
-		} catch (RuntimeException e) {
+		} catch (final RuntimeException e) {
 			this.serverState.logSystem.writeLog("Exception occurred during Phase 2: " + e.getCause().getMessage());
 		}
 
 		if (acceptedResponses.size() >= responsesNeeded) {
-			boolean hasNaks = acceptedResponses.stream().anyMatch(response -> !response.getPhase2Accepted());
+			final boolean hasNaks = acceptedResponses.stream().anyMatch(response -> !response.getPhase2Accepted());
 			if (!hasNaks) {
 				this.serverState.logSystem
 						.writeLog("[PAXOS (" + seqNum + ")]\t\tFINISHED PHASE TWO.");
@@ -204,14 +215,5 @@ public class Proposer extends Acceptor {
 			System.out.println("Error: didn't get enough responses from the quorum in Phase 2.");
 		}
 		return false;
-	}
-
-	public void promote() {
-		// proposer can't be promoted
-	}
-
-	public void demote() {
-		terminateComms();
-		this.serverState.changePaxosState(new Acceptor());
 	}
 }

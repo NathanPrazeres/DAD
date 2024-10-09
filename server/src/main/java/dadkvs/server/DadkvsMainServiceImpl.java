@@ -40,47 +40,6 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		}
 	}
 
-	public void temp() {
-		switch (_serverState.debugMode) {
-			case 0:
-				// Normal mode
-				System.out.println("Debug mode 0: Normal mode.");
-				break;
-			case 1:
-				// Crash the _server
-				System.out.println("Debug mode 1: Crash the _server.");
-				// just brute forcing for now
-				System.exit(0);
-				break;
-			case 2:
-				// Freeze the _server
-				System.out.println("Debug mode 2: Freeze the _server.");
-				_serverState.frozen = true;
-				break;
-			case 3:
-				// Un-freeze the _server
-				System.out.println("Debug mode 3: Un-freeze the _server.");
-				synchronized (_serverState.freezeLock) {
-					_serverState.frozen = false;
-					_serverState.freezeLock.notifyAll();
-				}
-				break;
-			case 4:
-				// Slow mode on (in_sert random delay between request processing)
-				System.out.println("Debug mode 4: Slow mode on");
-				_serverState.slowMode = true;
-				break;
-			case 5:
-				// Slow mode off (remove random delay)
-				System.out.println("Debug mode 5: Slow mode off");
-				_serverState.slowMode = false;
-				break;
-			default:
-				System.out.println("Unknown debug mode: " + _serverState.debugMode);
-				break;
-		}
-	}
-
 	@Override
 	public void read(DadkvsMain.ReadRequest request, StreamObserver<DadkvsMain.ReadReply> responseObserver) {
 		// for debug purposes

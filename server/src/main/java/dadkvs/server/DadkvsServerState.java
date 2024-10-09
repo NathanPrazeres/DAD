@@ -55,6 +55,47 @@ public class DadkvsServerState {
 		paxosState.setServerState(this);
 	}
 
+	public void temp() {
+		switch (debugMode) {
+			case 0:
+				// Normal mode
+				System.out.println("Debug mode 0: Normal mode.");
+				break;
+			case 1:
+				// Crash the _server
+				System.out.println("Debug mode 1: Crash the server.");
+				// just brute forcing for now
+				System.exit(0);
+				break;
+			case 2:
+				// Freeze the _server
+				System.out.println("Debug mode 2: Freeze the server.");
+				frozen = true;
+				break;
+			case 3:
+				// Un-freeze the _server
+				System.out.println("Debug mode 3: Un-freeze the server.");
+				synchronized (freezeLock) {
+					frozen = false;
+					freezeLock.notifyAll();
+				}
+				break;
+			case 4:
+				// Slow mode on (in_sert random delay between request processing)
+				System.out.println("Debug mode 4: Slow mode on");
+				slowMode = true;
+				break;
+			case 5:
+				// Slow mode off (remove random delay)
+				System.out.println("Debug mode 5: Slow mode off");
+				slowMode = false;
+				break;
+			default:
+				System.out.println("Unknown debug mode: " + debugMode);
+				break;
+		}
+	}
+
 	public int myId() {
 		return myId;
 	}

@@ -8,10 +8,10 @@ import io.grpc.stub.StreamObserver;
 
 public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosServiceImplBase {
 
-	DadkvsServerState server_state;
+	DadkvsServerState serverState;
 
 	public DadkvsPaxosServiceImpl(DadkvsServerState state) {
-		this.server_state = state;
+		this.serverState = state;
 
 	}
 
@@ -19,7 +19,7 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 	public void phaseone(DadkvsPaxos.PhaseOneRequest request,
 			StreamObserver<DadkvsPaxos.PhaseOneReply> responseObserver) {
 		// for debug purposes
-		responseObserver.onNext(server_state.paxosState.handlePrepareRequest(request));
+		responseObserver.onNext(serverState.paxosState.handlePrepareRequest(request));
 		responseObserver.onCompleted();
 	}
 
@@ -27,7 +27,7 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 	public void phasetwo(DadkvsPaxos.PhaseTwoRequest request,
 			StreamObserver<DadkvsPaxos.PhaseTwoReply> responseObserver) {
 		// for debug purposes
-		responseObserver.onNext(server_state.paxosState.handleAcceptRequest(request));
+		responseObserver.onNext(serverState.paxosState.handleAcceptRequest(request));
 		responseObserver.onCompleted();
 	}
 
@@ -35,10 +35,10 @@ public class DadkvsPaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosSe
 	public void learn(DadkvsPaxos.LearnRequest request, StreamObserver<DadkvsPaxos.LearnReply> responseObserver) {
 
 		try {
-			server_state.logSystem.writeLog("Learn request received at server " + server_state.my_id);
-			responseObserver.onNext(server_state.paxosState.handleLearnRequest(request));
+			serverState.logSystem.writeLog("Learn request received at server " + serverState.myId);
+			responseObserver.onNext(serverState.paxosState.handleLearnRequest(request));
 		} catch (Exception e) {
-			server_state.logSystem.writeLog("Error: " + e.getMessage());
+			serverState.logSystem.writeLog("Error: " + e.getMessage());
 			e.printStackTrace();
 			System.exit(0);
 		}

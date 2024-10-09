@@ -8,10 +8,10 @@ import io.grpc.stub.StreamObserver;
 
 public class DadkvsConsoleServiceImpl extends DadkvsConsoleServiceGrpc.DadkvsConsoleServiceImplBase {
 
-	DadkvsServerState server_state;
+	DadkvsServerState serverState;
 
 	public DadkvsConsoleServiceImpl(DadkvsServerState state) {
-		this.server_state = state;
+		this.serverState = state;
 	}
 
 	@Override
@@ -20,26 +20,26 @@ public class DadkvsConsoleServiceImpl extends DadkvsConsoleServiceGrpc.DadkvsCon
 		// for debug purposes
 		System.out.println(request);
 
-		boolean response_value = true;
+		boolean responseValue = true;
 		if (request.getIsleader()) {
-			server_state.paxosState.promote();
+			serverState.paxosState.promote();
 		} else {
-			server_state.paxosState.demote();
+			serverState.paxosState.demote();
 		}
-		this.server_state.i_am_leader = request.getIsleader();
+		this.serverState.iAmLeader = request.getIsleader();
 
 		// for debug purposes
-		System.out.println("I am the leader = " + this.server_state.i_am_leader);
-		server_state.logSystem.writeLog("I am the leader = " + this.server_state.i_am_leader);
+		System.out.println("I am the leader = " + this.serverState.iAmLeader);
+		serverState.logSystem.writeLog("I am the leader = " + this.serverState.iAmLeader);
 
-		this.server_state.main_loop.wakeup();
+		this.serverState.mainLoop.wakeup();
 
 		DadkvsConsole.SetLeaderReply response = DadkvsConsole.SetLeaderReply.newBuilder()
-				.setIsleaderack(response_value).build();
+				.setIsleaderack(responseValue).build();
 
 		responseObserver.onNext(response);
 		responseObserver.onCompleted();
-		server_state.logSystem.writeLog("Set leader request completed");
+		serverState.logSystem.writeLog("Set leader request completed");
 	}
 
 	@Override
@@ -48,20 +48,20 @@ public class DadkvsConsoleServiceImpl extends DadkvsConsoleServiceGrpc.DadkvsCon
 		// for debug purposes
 		System.out.println(request);
 
-		boolean response_value = true;
+		boolean responseValue = true;
 
-		this.server_state.debug_mode = request.getMode();
-		this.server_state.main_loop.wakeup();
+		this.serverState.debugMode = request.getMode();
+		this.serverState.mainLoop.wakeup();
 
 		// for debug purposes
-		System.out.println("Setting debug mode to = " + this.server_state.debug_mode);
-		server_state.logSystem.writeLog("Setting debug mode to = " + this.server_state.debug_mode);
+		System.out.println("Setting debug mode to = " + this.serverState.debugMode);
+		serverState.logSystem.writeLog("Setting debug mode to = " + this.serverState.debugMode);
 
 		DadkvsConsole.SetDebugReply response = DadkvsConsole.SetDebugReply.newBuilder()
-				.setAck(response_value).build();
+				.setAck(responseValue).build();
 
 		responseObserver.onNext(response);
 		responseObserver.onCompleted();
-		server_state.logSystem.writeLog("Set debug request completed");
+		serverState.logSystem.writeLog("Set debug request completed");
 	}
 }

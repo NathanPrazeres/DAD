@@ -24,32 +24,36 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		}
 	}
 
+	public void checkConsoleRequest(int reqId) {
+		if (reqId % 100 != 0) { // NOTE: its not a console request
+			synchronized (_serverState.freezeLock) {
+				while (_serverState.frozen) {
+					try {
+						_serverState.freezeLock.wait();
+					} catch (InterruptedException e) {
+					}
+				}
+			}
+			if (_serverState.slowMode) {
+				trySleep();
+			}
+		}
+	}
+
 	@Override
 	public void read(DadkvsMain.ReadRequest request, StreamObserver<DadkvsMain.ReadReply> responseObserver) {
 		// for debug purposes
 		System.out.println("Receiving read request:" + request);
 		_serverState.logSystem.writeLog("Receiving read request");
 
-		int reqid = request.getReqid();
+		int reqId = request.getReqid();
 		int key = request.getKey();
 
-		if (reqid % 100 != 0) { // NOTE: its not a console request
-			synchronized (_serverState.freeze_lock) {
-				while (_serverState.frozen) {
-					try {
-						_serverState.freeze_lock.wait();
-					} catch (InterruptedException e) {
-					}
-				}
-			}
-			if (_serverState.slow_mode) {
-				trySleep();
-			}
-		}
+		checkConsoleRequest(reqId);
 
 		VersionedValue vv = _serverState.store.read(key);
 		DadkvsMain.ReadReply response = DadkvsMain.ReadReply.newBuilder()
-				.setReqid(reqid).setValue(vv.getValue()).setTimestamp(vv.getVersion()).build();
+				.setReqid(reqId).setValue(vv.getValue()).setTimestamp(vv.getVersion()).build();
 
 		responseObserver.onNext(response);
 		responseObserver.onCompleted();
@@ -60,7 +64,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 	public void committx(DadkvsMain.CommitRequest request, StreamObserver<DadkvsMain.CommitReply> responseObserver) {
 		_serverState.logSystem.writeLog("Received commit request");
 
-		int reqid = request.getReqid();
+		int reqId = request.getReqid();
 		int key1 = request.getKey1();
 		int version1 = request.getVersion1();
 		int key2 = request.getKey2();
@@ -68,33 +72,22 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		int writekey = request.getWritekey();
 		int writeval = request.getWriteval();
 
-		if (reqid % 100 != 0) { // NOTE: its not a console request
-			synchronized (_serverState.freeze_lock) {
-				while (_serverState.frozen) {
-					try {
-						_serverState.freeze_lock.wait();
-					} catch (InterruptedException e) {
-					}
-				}
-			}
-			if (_serverState.slow_mode) {
-				trySleep();
-			}
-		}
+		checkConsoleRequest(reqId);
 
-		_serverState.paxosState.handleCommittx(reqid);
+		_serverState.paxosState.handleCommittx(reqId);
 
 		// for debug purposes
-        _serverState.logSystem.writeLog("reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2
-                + " wk " + writekey + " writeval " + writeval);
-        System.out.println("reqid " + reqid + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2
-                + " wk " + writekey + " writeval " + writeval);
+		_serverState.logSystem
+				.writeLog("reqId " + reqId + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2
+						+ " wk " + writekey + " writeval " + writeval);
+		System.out.println("reqId " + reqId + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2
+				+ " wk " + writekey + " writeval " + writeval);
 
 		_serverState.logSystem.writeLog("Waiting for sequence number");
-		int seqNumber = _serverState.getSequenceNumber(reqid);
+		int seqNumber = _serverState.getSequenceNumber(reqId);
 		_serverState.logSystem.writeLog("COMMITING: " + seqNumber);
 
-        _serverState.waitInLine(seqNumber);
+		_serverState.waitInLine(seqNumber);
 		timestamp++;
 
 		TransactionRecord txrecord = new TransactionRecord(key1, version1, key2, version2, writekey, writeval, timestamp);
@@ -102,7 +95,7 @@ public class DadkvsMainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServi
 		boolean result = _serverState.store.commit(txrecord);
 
 		DadkvsMain.CommitReply response = DadkvsMain.CommitReply.newBuilder()
-			.setReqid(reqid).setAck(result).build();
+				.setReqid(reqId).setAck(result).build();
 
 		_serverState.logSystem.writeLog(_serverState.store.toString());
 		_serverState.nextInLine();

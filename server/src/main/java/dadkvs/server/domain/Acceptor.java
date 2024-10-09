@@ -8,12 +8,12 @@ import io.grpc.ManagedChannelBuilder;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Acceptor extends PaxosState {
-						    // (Index, Value)
-	private ConcurrentHashMap<Integer, Integer> _paxosInstance  = new ConcurrentHashMap<>();
-	private int n_servers = 5;
+	// (Index, Value)
+	private ConcurrentHashMap<Integer, Integer> _paxosInstance = new ConcurrentHashMap<>();
+	private int nServers = 5;
 	private int _priority;
 	ManagedChannel[] channels;
-	public DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[] async_stubs;
+	public DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[] asyncStubs;
 
 	public void setServerState(DadkvsServerState serverState) {
 		this.serverState = serverState;
@@ -30,7 +30,8 @@ public class Acceptor extends PaxosState {
 
 		if (proposalTimestamp > highestTimestamp) {
 			this.serverState.logSystem
-					.writeLog("[PAXOS (" + proposalIndex + ")]\t\tProposer's timestamp was higher than ours: " + proposalTimestamp + "\tAccepting.");
+					.writeLog("[PAXOS (" + proposalIndex + ")]\t\tProposer's timestamp was higher than ours: " + proposalTimestamp
+							+ "\tAccepting.");
 			// accept value
 			highestTimestamp = proposalTimestamp;
 
@@ -48,7 +49,6 @@ public class Acceptor extends PaxosState {
 					.setPhase1Value(_paxosInstance.get(proposalIndex))
 					.setPhase1Timestamp(highestTimestamp)
 					.build();
-
 
 			return response;
 		} else {
@@ -90,7 +90,7 @@ public class Acceptor extends PaxosState {
 					.build();
 
 			// acceptors should trigger the learn request once they accept a value
-			sendLearnRequest(proposalIndex, _priority, _paxosInstance.get(proposalIndex), async_stubs);
+			sendLearnRequest(proposalIndex, _priority, _paxosInstance.get(proposalIndex), asyncStubs);
 
 			return response;
 		} else {
@@ -107,7 +107,7 @@ public class Acceptor extends PaxosState {
 		}
 	}
 
-	public void handleCommittx(int reqid) {
+	public void handleCommittx(int reqId) {
 		// Acceptor does nothing
 	}
 
@@ -124,31 +124,31 @@ public class Acceptor extends PaxosState {
 
 	public void initPaxosComms() {
 		// set servers
-		String[] targets = new String[n_servers];
+		String[] targets = new String[nServers];
 
-		for (int i = 0; i < n_servers; i++) {
-			int target_port = this.serverState.base_port + i;
+		for (int i = 0; i < nServers; i++) {
+			int targetPort = this.serverState.basePort + i;
 			targets[i] = new String();
-			targets[i] = "localhost:" + target_port;
+			targets[i] = "localhost:" + targetPort;
 			System.out.printf("targets[%d] = %s%n", i, targets[i]);
 		}
 
-		channels = new ManagedChannel[n_servers];
+		channels = new ManagedChannel[nServers];
 
-		for (int i = 0; i < n_servers; i++) {
+		for (int i = 0; i < nServers; i++) {
 			channels[i] = ManagedChannelBuilder.forTarget(targets[i]).usePlaintext().build();
 		}
 
-		async_stubs = new DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[n_servers];
+		asyncStubs = new DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[nServers];
 
-		for (int i = 0; i < n_servers; i++) {
-			async_stubs[i] = DadkvsPaxosServiceGrpc.newStub(channels[i]);
+		for (int i = 0; i < nServers; i++) {
+			asyncStubs[i] = DadkvsPaxosServiceGrpc.newStub(channels[i]);
 		}
 		this.serverState.logSystem.writeLog("Opened Stubs for PAXOS communication.");
 	}
 
 	public void terminateComms() {
-		for (int i = 0; i < n_servers; i++) {
+		for (int i = 0; i < nServers; i++) {
 			channels[i].shutdownNow();
 		}
 		this.serverState.logSystem.writeLog("Closed Stubs for PAXOS communication.");

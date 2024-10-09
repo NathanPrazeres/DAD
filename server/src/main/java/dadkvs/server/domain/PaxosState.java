@@ -6,7 +6,7 @@ import dadkvs.server.DadkvsServerState;
 import dadkvs.DadkvsPaxos;
 import dadkvs.DadkvsPaxosServiceGrpc;
 import java.util.ArrayList;
-import java.util.concurrent.CountDownLatch;	
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -16,7 +16,7 @@ import dadkvs.util.CollectorStreamObserver;
 public abstract class PaxosState {
 
 	int highestTimestamp = -1;
-	AtomicInteger num_responses = new AtomicInteger(0);
+	AtomicInteger numResponses = new AtomicInteger(0);
 	public DadkvsServerState serverState;
 
 	public abstract DadkvsPaxos.PhaseTwoReply handleAcceptRequest(DadkvsPaxos.PhaseTwoRequest request);
@@ -35,7 +35,7 @@ public abstract class PaxosState {
 		if (highestTimestamp == -1 || learnTimestamp > highestTimestamp) {
 			serverState.logSystem
 					.writeLog("[PAXOS (" + learnIndex + ")] Received request with higher timestamp than ours:\tResetting;");
-			num_responses = new AtomicInteger(1);
+			numResponses = new AtomicInteger(1);
 			highestTimestamp = learnTimestamp;
 		} else if (highestTimestamp > learnTimestamp) {
 			serverState.logSystem
@@ -44,12 +44,13 @@ public abstract class PaxosState {
 		} else {
 			serverState.logSystem
 					.writeLog("[PAXOS (" + learnIndex + ")] Received request with timestamp equal to ours:\tAccepting.");
-			
-			if (num_responses.get() < 2)
-				num_responses.incrementAndGet();
-			
-			if (num_responses.get() == 2) {
-				serverState.logSystem.writeLog("[PAXOS (" + learnIndex + ")] Adding request: '" + learnReqid + "' with sequencer number: '" + learnIndex + "'");
+
+			if (numResponses.get() < 2)
+				numResponses.incrementAndGet();
+
+			if (numResponses.get() == 2) {
+				serverState.logSystem.writeLog("[PAXOS (" + learnIndex + ")] Adding request: '" + learnReqid
+						+ "' with sequencer number: '" + learnIndex + "'");
 				serverState.addRequest(learnReqid, learnIndex);
 			}
 		}
@@ -61,7 +62,7 @@ public abstract class PaxosState {
 				.build();
 	}
 
-	public abstract void handleCommittx(int reqid);
+	public abstract void handleCommittx(int reqId);
 
 	public abstract void setServerState(DadkvsServerState serverState);
 
@@ -69,29 +70,33 @@ public abstract class PaxosState {
 
 	public abstract void demote();
 
-	public void sendLearnRequest(int paxosIndex, int priority, int acceptedValue, DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[] async_stubs) {
+	public void sendLearnRequest(int paxosIndex, int priority, int acceptedValue,
+			DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[] asyncStubs) {
 		serverState.logSystem
 				.writeLog("[PAXOS (" + paxosIndex + ")]\t\tSTARTING LEARN PHASE.");
 
 		DadkvsPaxos.LearnRequest.Builder request = DadkvsPaxos.LearnRequest.newBuilder();
-		ArrayList<DadkvsPaxos.LearnReply> learn_responses = new ArrayList<>();
-		GenericResponseCollector<DadkvsPaxos.LearnReply> learn_collector = new GenericResponseCollector<>(learn_responses, serverState.n_servers);
-		request.setLearnconfig(serverState.configuration).setLearnindex(paxosIndex).setLearnvalue(acceptedValue).setLearntimestamp(priority);
+		ArrayList<DadkvsPaxos.LearnReply> learnResponses = new ArrayList<>();
+		GenericResponseCollector<DadkvsPaxos.LearnReply> learnCollector = new GenericResponseCollector<>(learnResponses,
+				serverState.nServers);
+		request.setLearnconfig(serverState.configuration).setLearnindex(paxosIndex).setLearnvalue(acceptedValue)
+				.setLearntimestamp(priority);
 
 		serverState.logSystem
 				.writeLog("[PAXOS (" + paxosIndex + ")] Sending Learn request to all Learners.");
-				serverState.logSystem
-				.writeLog("[PAXOS (" + paxosIndex + ")] Learn request - Configuration: " + serverState.configuration + " Value: " + acceptedValue + " Priority: " + priority);
-		
-		int nServers = serverState.n_servers;
+		serverState.logSystem
+				.writeLog("[PAXOS (" + paxosIndex + ")] Learn request - Configuration: " + serverState.getConfiguration()
+						+ " Value: " + acceptedValue + " Priority: " + priority);
+
+		int nServers = serverState.nServers;
 		CountDownLatch latch = new CountDownLatch(nServers);
 		ExecutorService executor = Executors.newFixedThreadPool(nServers);
 
 		for (int i = 0; i < nServers; i++) {
 			final int index = i;
 			executor.submit(() -> {
-				CollectorStreamObserver<DadkvsPaxos.LearnReply> learn_observer = new CollectorStreamObserver<>(learn_collector);
-				async_stubs[index].learn(request.build(), learn_observer);
+				CollectorStreamObserver<DadkvsPaxos.LearnReply> learnObserver = new CollectorStreamObserver<>(learnCollector);
+				asyncStubs[index].learn(request.build(), learnObserver);
 				latch.countDown();
 			});
 		}
@@ -106,15 +111,15 @@ public abstract class PaxosState {
 		}
 
 		serverState.logSystem
-			.writeLog("[PAXOS (" + paxosIndex + ")] Waiting for learn replys.");
+				.writeLog("[PAXOS (" + paxosIndex + ")] Waiting for learn replys.");
 
-		learn_collector.waitForTarget(1);
-		if (learn_responses.size() >= 1) {
+		learnCollector.waitForTarget(1);
+		if (learnResponses.size() >= 1) {
 			serverState.logSystem
 					.writeLog("[PAXOS (" + paxosIndex + ")]\t\tENDING LEARN PHASE - SUCCESS.");
 		} else {
 			serverState.logSystem
-				.writeLog("[PAXOS (" + paxosIndex + ")]\t\tDID NOT RECEIVE LEARN REPLYS");
+					.writeLog("[PAXOS (" + paxosIndex + ")]\t\tDID NOT RECEIVE LEARN REPLYS");
 		}
 	}
 }

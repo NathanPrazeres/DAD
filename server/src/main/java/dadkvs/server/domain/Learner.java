@@ -18,7 +18,7 @@ public class Learner extends PaxosState {
 		return null;
 	}
 
-	public void handleCommittx(int reqid) {
+	public void handleCommittx(int reqId) {
 		// Learner does nothing
 	}
 

@@ -8,18 +8,18 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
 public class DadkvsServerState {
-	boolean i_am_leader;
-	public int n_servers;
-	int debug_mode;
-	public int base_port;
-	public int my_id;
-	int store_size;
+	boolean iAmLeader;
+	public int nServers;
+	int debugMode;
+	public int basePort;
+	public int myId;
+	int storeSize;
 	public KeyValueStore store;
-	MainLoop main_loop;
-	Thread main_loop_worker;
-	boolean slow_mode;
+	MainLoop mainLoop;
+	Thread mainLoopWorker;
+	boolean slowMode;
 	boolean frozen;
-	Object freeze_lock;
+	Object freezeLock;
 
 	private Queue _queue;
 	private PaxosQueue _paxosQueue;
@@ -29,19 +29,19 @@ public class DadkvsServerState {
 	public int configuration;
 
 	public DadkvsServerState(int kv_size, int port, int myself) {
-		base_port = port;
-		n_servers = 5;
-		my_id = myself;
-		i_am_leader = false;
-		debug_mode = 0;
-		store_size = kv_size;
+		basePort = port;
+		nServers = 5;
+		myId = myself;
+		iAmLeader = false;
+		debugMode = 0;
+		storeSize = kv_size;
 		store = new KeyValueStore(kv_size);
-		main_loop = new MainLoop(this);
-		main_loop_worker = new Thread(main_loop);
-		main_loop_worker.start();
-		slow_mode = false;
+		mainLoop = new MainLoop(this);
+		mainLoopWorker = new Thread(mainLoop);
+		mainLoopWorker.start();
+		slowMode = false;
 		frozen = false;
-		freeze_lock = new Object();
+		freezeLock = new Object();
 		configuration = 0;
 
 		_paxosQueue = new PaxosQueue();
@@ -61,11 +61,11 @@ public class DadkvsServerState {
 	}
 
 	public int myId() {
-		return my_id;
+		return myId;
 	}
 
 	public int getNumberOfServers() {
-		return n_servers;
+		return nServers;
 	}
 
 	public int getConfiguration() {
@@ -73,17 +73,18 @@ public class DadkvsServerState {
 	}
 
 	public <T extends PaxosState> void changePaxosState(T newState) {
-		logSystem.writeLog("Changed paxos state from " + paxosState.getClass().getSimpleName() + " to " + newState.getClass().getSimpleName());
-        paxosState = newState;
-        paxosState.setServerState(this);
+		logSystem.writeLog("Changed paxos state from " + paxosState.getClass().getSimpleName() + " to "
+				+ newState.getClass().getSimpleName());
+		paxosState = newState;
+		paxosState.setServerState(this);
 	}
 
-	public int getSequenceNumber(int reqid) {
-		return _paxosQueue.getSequenceNumber(reqid);
+	public int getSequenceNumber(int reqId) {
+		return _paxosQueue.getSequenceNumber(reqId);
 	}
 
-	public void addRequest(int reqid, int seqNumber) {
-		_paxosQueue.addRequest(reqid, seqNumber);
+	public void addRequest(int reqId, int seqNumber) {
+		_paxosQueue.addRequest(reqId, seqNumber);
 	}
 
 	public void waitInLine(int queueNumber) {
@@ -94,7 +95,7 @@ public class DadkvsServerState {
 		_queue.incrementQueueNumber();
 	}
 
-	public int getQuorum(int n_acceptors) {
-		return (int) Math.floor(n_acceptors / 2) + 1;
+	public int getQuorum(int nAcceptors) {
+		return (int) Math.floor(nAcceptors / 2) + 1;
 	}
 }

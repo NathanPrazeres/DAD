@@ -15,13 +15,13 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
 public class MainLoop implements Runnable {
-	DadkvsServerState server_state;
+	DadkvsServerState serverState;
 
-	private boolean has_work;
+	private boolean hasWork;
 
 	public MainLoop(DadkvsServerState state) {
-		this.server_state = state;
-		this.has_work = false;
+		this.serverState = state;
+		this.hasWork = false;
 	}
 
 	public void run() {
@@ -31,8 +31,8 @@ public class MainLoop implements Runnable {
 
 	synchronized public void doWork() {
 		System.out.println("Main loop do work start");
-		this.has_work = false;
-		while (this.has_work == false) {
+		this.hasWork = false;
+		while (this.hasWork == false) {
 			System.out.println("Main loop do work: waiting");
 			try {
 				wait();
@@ -42,7 +42,7 @@ public class MainLoop implements Runnable {
 
 		// Debug mode based behavior
 		// NOTE: eventually move this to its own class probably
-		switch (server_state.debug_mode) {
+		switch (serverState.debugMode) {
 			case 0:
 				// Normal mode
 				System.out.println("Debug mode 0: Normal mode.");
@@ -56,28 +56,28 @@ public class MainLoop implements Runnable {
 			case 2:
 				// Freeze the server
 				System.out.println("Debug mode 2: Freeze the server.");
-				this.server_state.frozen = true;
+				this.serverState.frozen = true;
 				break;
 			case 3:
 				// Un-freeze the server
 				System.out.println("Debug mode 3: Un-freeze the server.");
-				synchronized (this.server_state.freeze_lock) {
-					this.server_state.frozen = false;
-					this.server_state.freeze_lock.notifyAll();
+				synchronized (this.serverState.freezeLock) {
+					this.serverState.frozen = false;
+					this.serverState.freezeLock.notifyAll();
 				}
 				break;
 			case 4:
 				// Slow mode on (insert random delay between request processing)
 				System.out.println("Debug mode 4: Slow mode on");
-				this.server_state.slow_mode = true;
+				this.serverState.slowMode = true;
 				break;
 			case 5:
 				// Slow mode off (remove random delay)
 				System.out.println("Debug mode 5: Slow mode off");
-				this.server_state.slow_mode = false;
+				this.serverState.slowMode = false;
 				break;
 			default:
-				System.out.println("Unknown debug mode: " + server_state.debug_mode);
+				System.out.println("Unknown debug mode: " + serverState.debugMode);
 				break;
 		}
 
@@ -85,7 +85,7 @@ public class MainLoop implements Runnable {
 	}
 
 	synchronized public void wakeup() {
-		this.has_work = true;
+		this.hasWork = true;
 		notify();
 	}
 }

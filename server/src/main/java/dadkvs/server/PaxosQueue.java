@@ -6,13 +6,13 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class PaxosQueue {
-    private ConcurrentHashMap<Integer, Integer> _requestMap  = new ConcurrentHashMap<>();
+	private ConcurrentHashMap<Integer, Integer> _requestMap = new ConcurrentHashMap<>();
 	private final Lock _waitQueueLock = new ReentrantLock();
 	private final Condition _waitQueueCondition = _waitQueueLock.newCondition();
 
-    public int getSequenceNumber(int reqid) {
+	public int getSequenceNumber(int reqid) {
 		Integer seqNumber = _requestMap.get(reqid);
-		
+
 		while (seqNumber == null) {
 			_waitQueueLock.lock();
 			try {
@@ -30,15 +30,15 @@ public class PaxosQueue {
 			}
 		}
 		return seqNumber;
-    }
+	}
 
-    public void addRequest(int reqid, int seqNumber) {
-		_requestMap.put(reqid, seqNumber);
+	public void addRequest(int reqId, int seqNumber) {
+		_requestMap.put(reqId, seqNumber);
 		_waitQueueLock.lock();
 		try {
 			_waitQueueCondition.signalAll();
 		} finally {
 			_waitQueueLock.unlock();
 		}
-    }
+	}
 }

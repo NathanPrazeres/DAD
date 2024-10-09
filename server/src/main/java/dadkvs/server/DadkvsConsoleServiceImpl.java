@@ -32,8 +32,6 @@ public class DadkvsConsoleServiceImpl extends DadkvsConsoleServiceGrpc.DadkvsCon
 		System.out.println("I am the leader = " + this.serverState.iAmLeader);
 		serverState.logSystem.writeLog("I am the leader = " + this.serverState.iAmLeader);
 
-		this.serverState.mainLoop.wakeup();
-
 		DadkvsConsole.SetLeaderReply response = DadkvsConsole.SetLeaderReply.newBuilder()
 				.setIsleaderack(responseValue).build();
 
@@ -51,7 +49,6 @@ public class DadkvsConsoleServiceImpl extends DadkvsConsoleServiceGrpc.DadkvsCon
 		boolean responseValue = true;
 
 		this.serverState.debugMode = request.getMode();
-		this.serverState.mainLoop.wakeup();
 
 		// for debug purposes
 		System.out.println("Setting debug mode to = " + this.serverState.debugMode);

@@ -15,8 +15,6 @@ public class DadkvsServerState {
 	public int myId;
 	int storeSize;
 	public KeyValueStore store;
-	MainLoop mainLoop;
-	Thread mainLoopWorker;
 	boolean slowMode;
 	boolean frozen;
 	Object freezeLock;
@@ -36,9 +34,6 @@ public class DadkvsServerState {
 		debugMode = 0;
 		storeSize = kv_size;
 		store = new KeyValueStore(kv_size);
-		mainLoop = new MainLoop(this);
-		mainLoopWorker = new Thread(mainLoop);
-		mainLoopWorker.start();
 		slowMode = false;
 		frozen = false;
 		freezeLock = new Object();

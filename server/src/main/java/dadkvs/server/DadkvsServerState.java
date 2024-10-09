@@ -1,8 +1,8 @@
 package dadkvs.server;
 
-import dadkvs.server.domain.PaxosState;
-import dadkvs.server.domain.Learner;
 import dadkvs.server.domain.Acceptor;
+import dadkvs.server.domain.Learner;
+import dadkvs.server.domain.PaxosState;
 
 public class DadkvsServerState {
 	boolean iAmLeader;

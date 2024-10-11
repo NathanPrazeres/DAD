@@ -11,14 +11,12 @@ import dadkvs.server.DadkvsServerState;
 import dadkvs.server.Sequencer;
 import dadkvs.util.CollectorStreamObserver;
 import dadkvs.util.GenericResponseCollector;
-import io.grpc.ManagedChannel;
 
 public class Proposer extends Acceptor {
 	private final Sequencer _sequencer;
 	private final ConcurrentLinkedQueue<Integer> _requestQueue;
 	private int _priority;
 	private int _reqId;
-	ManagedChannel[] channels;
 
 	public Proposer() {
 		_requestQueue = new ConcurrentLinkedQueue<>();
@@ -131,11 +129,13 @@ public class Proposer extends Acceptor {
 		}
 
 		try {
+			this.serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tWaiting for all threads to finish.");
 			latch.await();
 		} catch (final InterruptedException e) {
 			Thread.currentThread().interrupt();
 			e.printStackTrace();
 		} finally {
+			this.serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tAll threads done");
 			executor.shutdown();
 		}
 
@@ -185,14 +185,33 @@ public class Proposer extends Acceptor {
 				acceptedResponses,
 				acceptors.length);
 
+		final int nAcceptors = acceptors.length;
+		final CountDownLatch latch = new CountDownLatch(nAcceptors);
+		final ExecutorService executor = Executors.newFixedThreadPool(nAcceptors);
+
 		for (final int acceptor : acceptors) {
-			try {
-				final CollectorStreamObserver<DadkvsPaxos.PhaseTwoReply> observer = new CollectorStreamObserver<>(collector);
-				asyncStubs[acceptor].phasetwo(accept.build(), observer);
-			} catch (final RuntimeException e) {
-				this.serverState.logSystem.writeLog(
-						"Exception occurred while sending Phase 2 request to acceptor " + acceptor + ": " + e.getMessage());
-			}
+			executor.submit(() -> {
+				try {
+					final CollectorStreamObserver<DadkvsPaxos.PhaseTwoReply> observer = new CollectorStreamObserver<>(collector);
+					asyncStubs[acceptor].phasetwo(accept.build(), observer);
+				} catch (final RuntimeException e) {
+					this.serverState.logSystem.writeLog(
+							"Exception occurred while sending Phase 2 request to acceptor " + acceptor + ": " + e.getMessage());
+				} finally {
+					latch.countDown();
+				}
+			});
+		}
+
+		try {
+			this.serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tWaiting for all threads to finish.");
+			latch.await();
+		} catch (final InterruptedException e) {
+			Thread.currentThread().interrupt();
+			e.printStackTrace();
+		} finally {
+			this.serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tAll threads done");
+			executor.shutdown();
 		}
 
 		final int responsesNeeded = this.serverState.getQuorum(acceptors.length);

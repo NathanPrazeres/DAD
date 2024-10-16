@@ -3,11 +3,11 @@ package dadkvs.server;
 import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
-import dadkvs.server.domain.DadkvsServerState;
+import dadkvs.server.domain.ServerState;
 
 public class DadkvsServer {
 
-	static DadkvsServerState serverState;
+	static ServerState serverState;
 
 	/** Server host port. */
 	private static int port;
@@ -33,13 +33,13 @@ public class DadkvsServer {
 		final int basePort = Integer.valueOf(args[0]);
 		final int myId = Integer.valueOf(args[1]);
 
-		serverState = new DadkvsServerState(kvsize, basePort, myId);
+		serverState = new ServerState(kvsize, basePort, myId);
 
 		port = basePort + myId;
 
-		final BindableService serviceImpl = new DadkvsMainServiceImpl(serverState);
-		final BindableService consoleImpl = new DadkvsConsoleServiceImpl(serverState);
-		final BindableService paxosImpl = new DadkvsPaxosServiceImpl(serverState);
+		final BindableService serviceImpl = new MainServiceImpl(serverState);
+		final BindableService consoleImpl = new ConsoleServiceImpl(serverState);
+		final BindableService paxosImpl = new PaxosServiceImpl(serverState);
 
 		// Create a new server to listen on port.
 		final Server server = ServerBuilder.forPort(port).addService(serviceImpl).addService(consoleImpl)

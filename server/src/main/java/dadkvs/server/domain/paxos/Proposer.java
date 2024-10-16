@@ -7,8 +7,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import dadkvs.DadkvsPaxos;
-import dadkvs.server.domain.DadkvsServerState;
-import dadkvs.server.domain.Sequencer;
+import dadkvs.server.domain.ServerState;
 import dadkvs.util.CollectorStreamObserver;
 import dadkvs.util.GenericResponseCollector;
 
@@ -24,7 +23,7 @@ public class Proposer extends Acceptor {
 		_sequencer = new Sequencer();
 	}
 
-	public void setServerState(final DadkvsServerState serverState) {
+	public void setServerState(final ServerState serverState) {
 		this.serverState = serverState;
 		_priority = this.serverState.myId(); // So that server 0 has the lowest and 4 has the highest base priority
 		initPaxosComms();

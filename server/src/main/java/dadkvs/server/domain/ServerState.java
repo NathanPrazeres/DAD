@@ -6,7 +6,7 @@ import dadkvs.server.domain.paxos.Learner;
 import dadkvs.server.domain.paxos.PaxosQueue;
 import dadkvs.server.domain.paxos.PaxosState;
 
-public class DadkvsServerState {
+public class ServerState {
 	public boolean iAmLeader;
 	public int nServers;
 	public int debugMode;
@@ -25,7 +25,7 @@ public class DadkvsServerState {
 	public LogSystem logSystem;
 	public int configuration;
 
-	public DadkvsServerState(final int kv_size, final int port, final int myself) {
+	public ServerState(final int kv_size, final int port, final int myself) {
 		basePort = port;
 		nServers = 5;
 		myId = myself;

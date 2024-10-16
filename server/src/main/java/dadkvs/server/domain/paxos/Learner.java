@@ -1,10 +1,10 @@
 package dadkvs.server.domain.paxos;
 
 import dadkvs.DadkvsPaxos;
-import dadkvs.server.domain.DadkvsServerState;
+import dadkvs.server.domain.ServerState;
 
 public class Learner extends PaxosState {
-	public void setServerState(final DadkvsServerState serverState) {
+	public void setServerState(final ServerState serverState) {
 		this.serverState = serverState;
 	}
 

@@ -4,7 +4,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import dadkvs.DadkvsPaxos;
 import dadkvs.DadkvsPaxosServiceGrpc;
-import dadkvs.server.domain.DadkvsServerState;
+import dadkvs.server.domain.ServerState;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
@@ -16,7 +16,7 @@ public class Acceptor extends PaxosState {
 	ManagedChannel[] channels;
 	public DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[] asyncStubs;
 
-	public void setServerState(final DadkvsServerState serverState) {
+	public void setServerState(final ServerState serverState) {
 		this.serverState = serverState;
 		_priority = this.serverState.myId(); // So that server 0 has the lowest and 4 has the highest base priority
 		initPaxosComms();

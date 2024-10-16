@@ -1,4 +1,4 @@
-package dadkvs.server.domain;
+package dadkvs.server.domain.paxos;
 
 import java.util.concurrent.atomic.AtomicInteger;
 

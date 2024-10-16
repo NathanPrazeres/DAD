@@ -66,7 +66,7 @@ public abstract class PaxosState {
 		final GenericResponseCollector<DadkvsPaxos.LearnReply> learnCollector = new GenericResponseCollector<>(
 			learnResponses,
 			_serverState.nServers);
-			request.setLearnconfig(_serverState.configuration).setLearnindex(paxosIndex).setLearnvalue(acceptedValue)
+			request.setLearnconfig(_serverState.getConfiguration()).setLearnindex(paxosIndex).setLearnvalue(acceptedValue)
 			.setLearntimestamp(priority);
 			
 			_serverState.logSystem

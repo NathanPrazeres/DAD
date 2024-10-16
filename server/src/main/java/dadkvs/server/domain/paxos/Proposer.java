@@ -96,7 +96,6 @@ public class Proposer extends Acceptor {
 	private boolean runPhaseOne(final int seqNum) {
 		_serverState.logSystem
 				.writeLog("[PAXOS (" + seqNum + ")]\t\tSTARTING PHASE ONE.");
-		final int[] acceptors = new int[] { 0, 1, 2 };
 
 		_serverState.logSystem
 				.writeLog("[PAXOS (" + seqNum + ")]\t\tSENDING PREPARES.");
@@ -108,13 +107,13 @@ public class Proposer extends Acceptor {
 		final ArrayList<DadkvsPaxos.PhaseOneReply> promiseResponses = new ArrayList<>();
 		final GenericResponseCollector<DadkvsPaxos.PhaseOneReply> collector = new GenericResponseCollector<>(
 				promiseResponses,
-				acceptors.length);
+				_serverState.acceptors.length);
 
-		final int nAcceptors = acceptors.length;
+		final int nAcceptors = _serverState.acceptors.length;
 		final CountDownLatch latch = new CountDownLatch(nAcceptors);
 		final ExecutorService executor = Executors.newFixedThreadPool(nAcceptors);
 
-		for (final int acceptor : acceptors) {
+		for (final int acceptor : _serverState.acceptors) {
 			executor.submit(() -> {
 				try {
 					final CollectorStreamObserver<DadkvsPaxos.PhaseOneReply> observer = new CollectorStreamObserver<>(collector);
@@ -139,7 +138,7 @@ public class Proposer extends Acceptor {
 			executor.shutdown();
 		}
 
-		final int responsesNeeded = _serverState.getQuorum(acceptors.length);
+		final int responsesNeeded = _serverState.getQuorum(_serverState.acceptors.length);
 		try {
 			collector.waitForTarget(responsesNeeded);
 		} catch (final RuntimeException e) {
@@ -169,7 +168,6 @@ public class Proposer extends Acceptor {
 	private boolean runPhaseTwo(final int seqNum) {
 		_serverState.logSystem
 				.writeLog("[PAXOS (" + seqNum + ")]\t\tSTARTING PHASE TWO.");
-		final int[] acceptors = new int[] { 0, 1, 2 };
 
 		_serverState.logSystem
 				.writeLog("[PAXOS (" + seqNum + ")]\t\tSENDING ACCEPT - " + "Value: " + _reqId + " Priority: " + _priority);
@@ -183,13 +181,13 @@ public class Proposer extends Acceptor {
 		final ArrayList<DadkvsPaxos.PhaseTwoReply> acceptedResponses = new ArrayList<>();
 		final GenericResponseCollector<DadkvsPaxos.PhaseTwoReply> collector = new GenericResponseCollector<>(
 				acceptedResponses,
-				acceptors.length);
+				_serverState.acceptors.length);
 
-		final int nAcceptors = acceptors.length;
+		final int nAcceptors = _serverState.acceptors.length;
 		final CountDownLatch latch = new CountDownLatch(nAcceptors);
 		final ExecutorService executor = Executors.newFixedThreadPool(nAcceptors);
 
-		for (final int acceptor : acceptors) {
+		for (final int acceptor : _serverState.acceptors) {
 			executor.submit(() -> {
 				try {
 					final CollectorStreamObserver<DadkvsPaxos.PhaseTwoReply> observer = new CollectorStreamObserver<>(collector);
@@ -214,7 +212,7 @@ public class Proposer extends Acceptor {
 			executor.shutdown();
 		}
 
-		final int responsesNeeded = _serverState.getQuorum(acceptors.length);
+		final int responsesNeeded = _serverState.getQuorum(_serverState.acceptors.length);
 		try {
 			collector.waitForTarget(responsesNeeded);
 		} catch (final RuntimeException e) {
@@ -234,5 +232,23 @@ public class Proposer extends Acceptor {
 			System.out.println("Error: didn't get enough responses from the quorum in Phase 2.");
 		}
 		return false;
+	}
+
+	@Override
+	public void reconfigure(int newConfig) {
+		int[] config = ServerState.CONFIGS[newConfig];
+		boolean found = false;
+	
+		for (int id : config) {
+			if (id == _serverState.myId) {
+				found = true;
+				break;
+			}
+		}
+	
+		if (!found) {
+			_serverState.logSystem.writeLog("Reconfiguring");
+			super.demote();
+		}
 	}
 }

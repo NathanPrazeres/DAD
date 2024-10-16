@@ -154,4 +154,22 @@ public class Acceptor extends PaxosState {
 		}
 		_serverState.logSystem.writeLog("Closed Stubs for PAXOS communication.");
 	}
+
+	@Override
+	public void reconfigure(int newConfig) {
+		int[] config = ServerState.CONFIGS[newConfig];
+		boolean found = false;
+	
+		for (int id : config) {
+			if (id == _serverState.myId) {
+				found = true;
+				break;
+			}
+		}
+	
+		if (!found) {
+			_serverState.logSystem.writeLog("Reconfiguring");
+			demote();
+		}
+	}
 }

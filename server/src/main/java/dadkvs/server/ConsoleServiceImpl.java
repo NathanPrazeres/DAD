@@ -8,10 +8,10 @@ import io.grpc.stub.StreamObserver;
 
 public class ConsoleServiceImpl extends DadkvsConsoleServiceGrpc.DadkvsConsoleServiceImplBase {
 
-	ServerState serverState;
+	private ServerState _serverState;
 
 	public ConsoleServiceImpl(final ServerState state) {
-		this.serverState = state;
+		this._serverState = state;
 	}
 
 	@Override
@@ -21,23 +21,14 @@ public class ConsoleServiceImpl extends DadkvsConsoleServiceGrpc.DadkvsConsoleSe
 		System.out.println(request);
 
 		final boolean responseValue = true;
-		if (request.getIsleader()) {
-			serverState.paxosState.promote();
-		} else {
-			serverState.paxosState.demote();
-		}
-		this.serverState.iAmLeader = request.getIsleader();
-
-		// for debug purposes
-		System.out.println("I am the leader = " + this.serverState.iAmLeader);
-		serverState.logSystem.writeLog("I am the leader = " + this.serverState.iAmLeader);
+		_serverState.setLeader(request.getIsleader());
 
 		final DadkvsConsole.SetLeaderReply response = DadkvsConsole.SetLeaderReply.newBuilder()
 				.setIsleaderack(responseValue).build();
 
 		responseObserver.onNext(response);
 		responseObserver.onCompleted();
-		serverState.logSystem.writeLog("Set leader request completed");
+		_serverState.logSystem.writeLog("Set leader request completed");
 	}
 
 	@Override
@@ -48,17 +39,13 @@ public class ConsoleServiceImpl extends DadkvsConsoleServiceGrpc.DadkvsConsoleSe
 
 		final boolean responseValue = true;
 
-		this.serverState.debugMode = request.getMode();
-
-		// for debug purposes
-		System.out.println("Setting debug mode to = " + this.serverState.debugMode);
-		serverState.logSystem.writeLog("Setting debug mode to = " + this.serverState.debugMode);
+		_serverState.setDebugMode(request.getMode());
 
 		final DadkvsConsole.SetDebugReply response = DadkvsConsole.SetDebugReply.newBuilder()
 				.setAck(responseValue).build();
 
 		responseObserver.onNext(response);
 		responseObserver.onCompleted();
-		serverState.logSystem.writeLog("Set debug request completed");
+		_serverState.logSystem.writeLog("Set debug request completed");
 	}
 }

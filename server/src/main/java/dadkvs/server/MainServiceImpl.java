@@ -19,7 +19,7 @@ public class MainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServiceImpl
 		this.timestamp = 0;
 	}
 
-	public void trySleep() {
+	private void trySleep() {
 		try {
 			Thread.sleep((int) (SERVER_DELAY * (Math.random() + 0.5))); // Median is SERVER_DELAY
 		} catch (final InterruptedException e) {
@@ -53,7 +53,7 @@ public class MainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServiceImpl
 
 		checkConsoleRequest(reqId);
 
-		final VersionedValue vv = _serverState.store.read(key);
+		final VersionedValue vv = _serverState.read(key);
 		final DadkvsMain.ReadReply response = DadkvsMain.ReadReply.newBuilder()
 				.setReqid(reqId).setValue(vv.getValue()).setTimestamp(vv.getVersion()).build();
 
@@ -76,32 +76,34 @@ public class MainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServiceImpl
 		final int writeval = request.getWriteval();
 
 		checkConsoleRequest(reqId);
+		int seqNumber = -1;
 
-		_serverState.paxosState.handleCommittx(reqId);
+		while (seqNumber == -1) {
+			_serverState.paxosState.handleCommittx(reqId);
 
-		// for debug purposes
-		_serverState.logSystem
-				.writeLog("reqId " + reqId + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2
-						+ " wk " + writekey + " writeval " + writeval);
-		System.out.println("reqId " + reqId + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2
-				+ " wk " + writekey + " writeval " + writeval);
+			// for debug purposes
+			_serverState.logSystem
+					.writeLog("reqId " + reqId + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2
+							+ " wk " + writekey + " writeval " + writeval);
+			System.out.println("reqId " + reqId + " key1 " + key1 + " v1 " + version1 + " k2 " + key2 + " v2 " + version2
+					+ " wk " + writekey + " writeval " + writeval);
 
-		_serverState.logSystem.writeLog("Waiting for sequence number");
-		final int seqNumber = _serverState.getSequenceNumber(reqId);
+			_serverState.logSystem.writeLog("Waiting for sequence number");
+			seqNumber = _serverState.getSequenceNumber(reqId);
+		}
+		
 		_serverState.logSystem.writeLog("COMMITING: " + seqNumber);
-
 		_serverState.waitInLine(seqNumber);
 		timestamp++;
 
 		final TransactionRecord txrecord = new TransactionRecord(key1, version1, key2, version2, writekey, writeval,
 				timestamp);
 
-		final boolean result = _serverState.store.commit(txrecord);
+		final boolean result = _serverState.commit(txrecord);
 
 		final DadkvsMain.CommitReply response = DadkvsMain.CommitReply.newBuilder()
 				.setReqid(reqId).setAck(result).build();
 
-		_serverState.logSystem.writeLog(_serverState.store.toString());
 		_serverState.nextInLine();
 
 		responseObserver.onNext(response);

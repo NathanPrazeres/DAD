@@ -5,7 +5,7 @@ import dadkvs.server.domain.ServerState;
 
 public class Learner extends PaxosState {
 	public void setServerState(final ServerState serverState) {
-		this.serverState = serverState;
+		this._serverState = serverState;
 	}
 
 	public DadkvsPaxos.PhaseOneReply handlePrepareRequest(final DadkvsPaxos.PhaseOneRequest request) {
@@ -21,7 +21,7 @@ public class Learner extends PaxosState {
 	}
 
 	public void promote() {
-		this.serverState.changePaxosState(new Acceptor());
+		this._serverState.changePaxosState(new Acceptor());
 	}
 
 	@Override

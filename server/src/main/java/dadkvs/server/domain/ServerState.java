@@ -7,32 +7,26 @@ import dadkvs.server.domain.paxos.PaxosQueue;
 import dadkvs.server.domain.paxos.PaxosState;
 
 public class ServerState {
-	public boolean iAmLeader;
 	public int nServers;
-	public int debugMode;
 	public int basePort;
 	public int myId;
-	int storeSize;
-	public KeyValueStore store;
 	public boolean slowMode;
 	public boolean frozen;
 	public Object freezeLock;
-
-	private final Queue _queue;
-	private final PaxosQueue _paxosQueue;
-
 	public PaxosState paxosState;
 	public LogSystem logSystem;
-	public int configuration;
+	
+	private KeyValueStore _store;
+	private final Queue _queue;
+	private final PaxosQueue _paxosQueue;
+	private int configuration;
+
 
 	public ServerState(final int kv_size, final int port, final int myself) {
 		basePort = port;
 		nServers = 5;
 		myId = myself;
-		iAmLeader = false;
-		debugMode = 0;
-		storeSize = kv_size;
-		store = new KeyValueStore(kv_size);
+		_store = new KeyValueStore(kv_size);
 		slowMode = false;
 		frozen = false;
 		freezeLock = new Object();
@@ -54,27 +48,27 @@ public class ServerState {
 		paxosState.setServerState(this);
 	}
 
-	public void temp() {
+	public void setDebugMode(int debugMode) {
 		switch (debugMode) {
 			case 0:
 				// Normal mode
-				System.out.println("Debug mode 0: Normal mode.");
+				logSystem.writeLog("Debug mode 0: Normal mode.");
 				break;
 			case 1:
 				// Crash the _server
-				System.out.println("Debug mode 1: Crash the server.");
+				logSystem.writeLog("Debug mode 1: Crash the server.");
 				// just brute forcing for now
 				// FIXME: maybe close stubs
 				System.exit(0);
 				break;
 			case 2:
 				// Freeze the _server
-				System.out.println("Debug mode 2: Freeze the server.");
+				logSystem.writeLog("Debug mode 2: Freeze the server.");
 				frozen = true;
 				break;
 			case 3:
 				// Un-freeze the _server
-				System.out.println("Debug mode 3: Un-freeze the server.");
+				logSystem.writeLog("Debug mode 3: Un-freeze the server.");
 				synchronized (freezeLock) {
 					frozen = false;
 					freezeLock.notifyAll();
@@ -82,16 +76,16 @@ public class ServerState {
 				break;
 			case 4:
 				// Slow mode on (in_sert random delay between request processing)
-				System.out.println("Debug mode 4: Slow mode on");
+				logSystem.writeLog("Debug mode 4: Slow mode on");
 				slowMode = true;
 				break;
 			case 5:
 				// Slow mode off (remove random delay)
-				System.out.println("Debug mode 5: Slow mode off");
+				logSystem.writeLog("Debug mode 5: Slow mode off");
 				slowMode = false;
 				break;
 			default:
-				System.out.println("Unknown debug mode: " + debugMode);
+				logSystem.writeLog("Unknown debug mode: " + debugMode);
 				break;
 		}
 	}
@@ -133,5 +127,29 @@ public class ServerState {
 
 	public int getQuorum(final int nAcceptors) {
 		return (int) Math.floor(nAcceptors / 2) + 1;
+	}
+
+	public void setLeader(boolean isLeader) {
+		if (isLeader) {
+			logSystem.writeLog("Promoted");
+			paxosState.promote();
+		} else {
+			logSystem.writeLog("Demoted");
+			paxosState.demote();
+		}
+	}
+
+	public boolean commit(TransactionRecord txrecord) {
+		boolean result = _store.commit(txrecord);
+		logSystem.writeLog(_store.toString());
+		return result;
+	}
+
+	public VersionedValue read(int key) {
+		return _store.read(key);
+	}
+
+	public void requestCancellation() {
+		_paxosQueue.requestCancellation();
 	}
 }

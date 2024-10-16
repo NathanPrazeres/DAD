@@ -7,17 +7,15 @@ import dadkvs.server.domain.paxos.PaxosQueue;
 import dadkvs.server.domain.paxos.PaxosState;
 
 public class ServerState {
-	public boolean iAmLeader;
 	public int nServers;
-	public int debugMode;
 	public int basePort;
 	public int myId;
 	int storeSize;
-	public KeyValueStore store;
 	public boolean slowMode;
 	public boolean frozen;
 	public Object freezeLock;
-
+	
+	private KeyValueStore _store;
 	private final Queue _queue;
 	private final PaxosQueue _paxosQueue;
 
@@ -29,10 +27,8 @@ public class ServerState {
 		basePort = port;
 		nServers = 5;
 		myId = myself;
-		iAmLeader = false;
-		debugMode = 0;
 		storeSize = kv_size;
-		store = new KeyValueStore(kv_size);
+		_store = new KeyValueStore(kv_size);
 		slowMode = false;
 		frozen = false;
 		freezeLock = new Object();
@@ -54,7 +50,7 @@ public class ServerState {
 		paxosState.setServerState(this);
 	}
 
-	public void temp() {
+	public void setDebugMode(int debugMode) {
 		switch (debugMode) {
 			case 0:
 				// Normal mode
@@ -133,5 +129,29 @@ public class ServerState {
 
 	public int getQuorum(final int nAcceptors) {
 		return (int) Math.floor(nAcceptors / 2) + 1;
+	}
+
+	public void setLeader(boolean isLeader) {
+		if (isLeader) {
+			logSystem.writeLog("Promoted");
+			paxosState.promote();
+		} else {
+			logSystem.writeLog("Demoted");
+			paxosState.demote();
+		}
+	}
+
+	public boolean commit(TransactionRecord txrecord) {
+		boolean result = _store.commit(txrecord);
+		logSystem.writeLog(_store.toString());
+		return result;
+	}
+
+	public VersionedValue read(int key) {
+		return _store.read(key);
+	}
+
+	public void requestCancellation() {
+		_paxosQueue.requestCancellation();
 	}
 }

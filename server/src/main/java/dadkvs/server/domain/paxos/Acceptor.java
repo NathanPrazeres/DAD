@@ -17,8 +17,8 @@ public class Acceptor extends PaxosState {
 	public DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[] asyncStubs;
 
 	public void setServerState(final ServerState serverState) {
-		this.serverState = serverState;
-		_priority = this.serverState.myId(); // So that server 0 has the lowest and 4 has the highest base priority
+		_serverState = serverState;
+		_priority = _serverState.myId(); // So that server 0 has the lowest and 4 has the highest base priority
 		initPaxosComms();
 	}
 
@@ -27,10 +27,10 @@ public class Acceptor extends PaxosState {
 		final int proposalIndex = request.getPhase1Index();
 		final int proposalTimestamp = request.getPhase1Timestamp();
 
-		this.serverState.logSystem.writeLog("[PAXOS (" + proposalIndex + ")]\t\tRECEIVED PREPARE.");
+		_serverState.logSystem.writeLog("[PAXOS (" + proposalIndex + ")]\t\tRECEIVED PREPARE.");
 
 		if (proposalTimestamp > highestTimestamp) {
-			this.serverState.logSystem
+			_serverState.logSystem
 					.writeLog("[PAXOS (" + proposalIndex + ")]\t\tProposer's timestamp was higher than ours: " + proposalTimestamp
 							+ "\tAccepting.");
 			// accept value
@@ -40,7 +40,7 @@ public class Acceptor extends PaxosState {
 				_paxosInstance.put(proposalIndex, -1);
 			}
 
-			this.serverState.logSystem
+			_serverState.logSystem
 					.writeLog("[PAXOS (" + proposalIndex + ")] Replying with value: " + _paxosInstance.get(proposalIndex));
 
 			final DadkvsPaxos.PhaseOneReply response = DadkvsPaxos.PhaseOneReply.newBuilder()
@@ -53,7 +53,7 @@ public class Acceptor extends PaxosState {
 
 			return response;
 		} else {
-			this.serverState.logSystem
+			_serverState.logSystem
 					.writeLog("[PAXOS (" + proposalIndex + ")] Proposer's timestamp was lower than ours:\tRejecting.");
 			// reject value
 			final DadkvsPaxos.PhaseOneReply response = DadkvsPaxos.PhaseOneReply.newBuilder()
@@ -72,12 +72,12 @@ public class Acceptor extends PaxosState {
 		final int proposalValue = request.getPhase2Value();
 		final int proposalTimestamp = request.getPhase2Timestamp();
 
-		this.serverState.logSystem.writeLog("[PAXOS (" + proposalIndex + ")]\t\tRECEIVED ACCEPT.");
+		_serverState.logSystem.writeLog("[PAXOS (" + proposalIndex + ")]\t\tRECEIVED ACCEPT.");
 
 		// If the proposal's timestamp is higher than the highest seen, accept it
 		if (proposalTimestamp >= _priority) {
 
-			this.serverState.logSystem
+			_serverState.logSystem
 					.writeLog("[PAXOS (" + proposalIndex + ")] Proposer's timestamp was higher/equal to ours:\tAccepting.");
 
 			_priority = proposalTimestamp;
@@ -95,7 +95,7 @@ public class Acceptor extends PaxosState {
 
 			return response;
 		} else {
-			this.serverState.logSystem
+			_serverState.logSystem
 					.writeLog("[PAXOS (" + proposalIndex + ")] Proposer's timestamp was lower than ours:\tRejecting.");
 			// Reject if a higher proposal has already been seen
 			final DadkvsPaxos.PhaseTwoReply response = DadkvsPaxos.PhaseTwoReply.newBuilder()
@@ -114,13 +114,13 @@ public class Acceptor extends PaxosState {
 
 	public void promote() {
 		terminateComms();
-		this.serverState.changePaxosState(new Proposer());
+		_serverState.changePaxosState(new Proposer());
 
 	}
 
 	public void demote() {
 		terminateComms();
-		this.serverState.changePaxosState(new Learner());
+		_serverState.changePaxosState(new Learner());
 	}
 
 	public void initPaxosComms() {
@@ -128,7 +128,7 @@ public class Acceptor extends PaxosState {
 		final String[] targets = new String[nServers];
 
 		for (int i = 0; i < nServers; i++) {
-			final int targetPort = this.serverState.basePort + i;
+			final int targetPort = _serverState.basePort + i;
 			targets[i] = new String();
 			targets[i] = "localhost:" + targetPort;
 			System.out.printf("targets[%d] = %s%n", i, targets[i]);
@@ -145,13 +145,13 @@ public class Acceptor extends PaxosState {
 		for (int i = 0; i < nServers; i++) {
 			asyncStubs[i] = DadkvsPaxosServiceGrpc.newStub(channels[i]);
 		}
-		this.serverState.logSystem.writeLog("Opened Stubs for PAXOS communication.");
+		_serverState.logSystem.writeLog("Opened Stubs for PAXOS communication.");
 	}
 
 	public void terminateComms() {
 		for (int i = 0; i < nServers; i++) {
 			channels[i].shutdownNow();
 		}
-		this.serverState.logSystem.writeLog("Closed Stubs for PAXOS communication.");
+		_serverState.logSystem.writeLog("Closed Stubs for PAXOS communication.");
 	}
 }

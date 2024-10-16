@@ -24,21 +24,22 @@ public class Proposer extends Acceptor {
 	}
 
 	public void setServerState(final ServerState serverState) {
-		this.serverState = serverState;
-		_priority = this.serverState.myId(); // So that server 0 has the lowest and 4 has the highest base priority
+		_serverState = serverState;
+		_priority = _serverState.myId(); // So that server 0 has the lowest and 4 has the highest base priority
 		initPaxosComms();
+		_serverState.requestCancellation();
 	}
 
 	// public void handlePromiseRequest();
 	public void handleCommittx(final int reqId) {
-		this.serverState.logSystem.writeLog("Handling commit request with Request ID: " + reqId);
+		_serverState.logSystem.writeLog("Handling commit request with Request ID: " + reqId);
 		_requestQueue.add(reqId);
 		final int seqNumber = _sequencer.getSequenceNumber();
 		runPaxos(seqNumber);
 	}
 
 	public boolean runPaxos(final int seqNum) {
-		this.serverState.logSystem.writeLog("Starting [PAXOS(" + seqNum + ")]...");
+		_serverState.logSystem.writeLog("Starting [PAXOS(" + seqNum + ")]...");
 		try {
 			while (true) {
 				if (!runPhaseOne(seqNum)) {
@@ -48,11 +49,11 @@ public class Proposer extends Acceptor {
 					continue;
 				}
 
-				this.serverState.logSystem.writeLog("Ending [PAXOS(" + seqNum + ")]...");
+				_serverState.logSystem.writeLog("Ending [PAXOS(" + seqNum + ")]...");
 				break;
 			}
 		} catch (final RuntimeException e) {
-			this.serverState.logSystem.writeLog("Exception occurred while running Paxos: " + e.getMessage());
+			_serverState.logSystem.writeLog("Exception occurred while running Paxos: " + e.getMessage());
 			return false;
 		}
 		return true;
@@ -69,12 +70,12 @@ public class Proposer extends Acceptor {
 					value = response.getPhase1Value();
 				}
 			}
-			serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tResponse: " + i + " TimeStamp: "
+			_serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tResponse: " + i + " TimeStamp: "
 					+ response.getPhase1Timestamp() + " Value: " + response.getPhase1Value());
 			i++;
 		}
 
-		serverState.logSystem.writeLog(
+		_serverState.logSystem.writeLog(
 				"[PAXOS (" + seqNum + ")]\t\tHighest Proposed Value: " + value + " Highest Time Stamp: " + highestTimestamp);
 		return value;
 	}
@@ -85,24 +86,24 @@ public class Proposer extends Acceptor {
 
 	public void demote() {
 		terminateComms();
-		this.serverState.changePaxosState(new Acceptor());
+		_serverState.changePaxosState(new Acceptor());
 	}
 
 	private void setNewTimestamp() {
-		_priority += this.serverState.getNumberOfServers();
+		_priority += _serverState.getNumberOfServers();
 	}
 
 	private boolean runPhaseOne(final int seqNum) {
-		this.serverState.logSystem
+		_serverState.logSystem
 				.writeLog("[PAXOS (" + seqNum + ")]\t\tSTARTING PHASE ONE.");
 		final int[] acceptors = new int[] { 0, 1, 2 };
 
-		this.serverState.logSystem
+		_serverState.logSystem
 				.writeLog("[PAXOS (" + seqNum + ")]\t\tSENDING PREPARES.");
 
 		final DadkvsPaxos.PhaseOneRequest.Builder prepare = DadkvsPaxos.PhaseOneRequest.newBuilder()
 				.setPhase1Index(seqNum)
-				.setPhase1Config(this.serverState.getConfiguration())
+				.setPhase1Config(_serverState.getConfiguration())
 				.setPhase1Timestamp(_priority);
 		final ArrayList<DadkvsPaxos.PhaseOneReply> promiseResponses = new ArrayList<>();
 		final GenericResponseCollector<DadkvsPaxos.PhaseOneReply> collector = new GenericResponseCollector<>(
@@ -119,7 +120,7 @@ public class Proposer extends Acceptor {
 					final CollectorStreamObserver<DadkvsPaxos.PhaseOneReply> observer = new CollectorStreamObserver<>(collector);
 					asyncStubs[acceptor].phaseone(prepare.build(), observer);
 				} catch (final RuntimeException e) {
-					this.serverState.logSystem.writeLog(
+					_serverState.logSystem.writeLog(
 							"Exception occurred while sending Prepare request to Acceptor " + acceptor + ": " + e.getMessage());
 				} finally {
 					latch.countDown();
@@ -128,21 +129,21 @@ public class Proposer extends Acceptor {
 		}
 
 		try {
-			this.serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tWaiting for all threads to finish.");
+			_serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tWaiting for all threads to finish.");
 			latch.await();
 		} catch (final InterruptedException e) {
 			Thread.currentThread().interrupt();
 			e.printStackTrace();
 		} finally {
-			this.serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tAll threads done");
+			_serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tAll threads done");
 			executor.shutdown();
 		}
 
-		final int responsesNeeded = this.serverState.getQuorum(acceptors.length);
+		final int responsesNeeded = _serverState.getQuorum(acceptors.length);
 		try {
 			collector.waitForTarget(responsesNeeded);
 		} catch (final RuntimeException e) {
-			this.serverState.logSystem.writeLog("Exception occurred during Phase 1: " + e.getCause().getMessage());
+			_serverState.logSystem.writeLog("Exception occurred during Phase 1: " + e.getCause().getMessage());
 		}
 
 		if (promiseResponses.size() >= responsesNeeded) {
@@ -151,30 +152,30 @@ public class Proposer extends Acceptor {
 				_reqId = extractHighestProposedValue(promiseResponses, seqNum);
 				if (_reqId == -1) {
 					_reqId = _requestQueue.poll();
-					this.serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tREMOVED " + _reqId + " FROM THE QUEUE");
+					_serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tREMOVED " + _reqId + " FROM THE QUEUE");
 				}
-				this.serverState.logSystem
+				_serverState.logSystem
 						.writeLog("[PAXOS (" + seqNum + ")]\t\tFINISHED PHASE ONE WITH REQUEST ID " + _reqId);
 				return true;
 			}
 			setNewTimestamp();
 		} else {
-			this.serverState.logSystem.writeLog("Error: didn't get enough responses from the quorum in Phase 1.");
+			_serverState.logSystem.writeLog("Error: didn't get enough responses from the quorum in Phase 1.");
 			System.out.println("Error: didn't get enough responses from the quorum in Phase 1.");
 		}
 		return false;
 	}
 
 	private boolean runPhaseTwo(final int seqNum) {
-		this.serverState.logSystem
+		_serverState.logSystem
 				.writeLog("[PAXOS (" + seqNum + ")]\t\tSTARTING PHASE TWO.");
 		final int[] acceptors = new int[] { 0, 1, 2 };
 
-		this.serverState.logSystem
+		_serverState.logSystem
 				.writeLog("[PAXOS (" + seqNum + ")]\t\tSENDING ACCEPT - " + "Value: " + _reqId + " Priority: " + _priority);
 
 		final DadkvsPaxos.PhaseTwoRequest.Builder accept = DadkvsPaxos.PhaseTwoRequest.newBuilder()
-				.setPhase2Config(this.serverState.getConfiguration())
+				.setPhase2Config(_serverState.getConfiguration())
 				.setPhase2Index(seqNum)
 				.setPhase2Value(_reqId)
 				.setPhase2Timestamp(_priority);
@@ -194,7 +195,7 @@ public class Proposer extends Acceptor {
 					final CollectorStreamObserver<DadkvsPaxos.PhaseTwoReply> observer = new CollectorStreamObserver<>(collector);
 					asyncStubs[acceptor].phasetwo(accept.build(), observer);
 				} catch (final RuntimeException e) {
-					this.serverState.logSystem.writeLog(
+					_serverState.logSystem.writeLog(
 							"Exception occurred while sending Phase 2 request to acceptor " + acceptor + ": " + e.getMessage());
 				} finally {
 					latch.countDown();
@@ -203,33 +204,33 @@ public class Proposer extends Acceptor {
 		}
 
 		try {
-			this.serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tWaiting for all threads to finish.");
+			_serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tWaiting for all threads to finish.");
 			latch.await();
 		} catch (final InterruptedException e) {
 			Thread.currentThread().interrupt();
 			e.printStackTrace();
 		} finally {
-			this.serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tAll threads done");
+			_serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tAll threads done");
 			executor.shutdown();
 		}
 
-		final int responsesNeeded = this.serverState.getQuorum(acceptors.length);
+		final int responsesNeeded = _serverState.getQuorum(acceptors.length);
 		try {
 			collector.waitForTarget(responsesNeeded);
 		} catch (final RuntimeException e) {
-			this.serverState.logSystem.writeLog("Exception occurred during Phase 2: " + e.getCause().getMessage());
+			_serverState.logSystem.writeLog("Exception occurred during Phase 2: " + e.getCause().getMessage());
 		}
 
 		if (acceptedResponses.size() >= responsesNeeded) {
 			final boolean hasNaks = acceptedResponses.stream().anyMatch(response -> !response.getPhase2Accepted());
 			if (!hasNaks) {
-				this.serverState.logSystem
+				_serverState.logSystem
 						.writeLog("[PAXOS (" + seqNum + ")]\t\tFINISHED PHASE TWO.");
 				return true;
 			}
 			setNewTimestamp();
 		} else {
-			this.serverState.logSystem.writeLog("Error: didn't get enough responses from the quorum in Phase 2.");
+			_serverState.logSystem.writeLog("Error: didn't get enough responses from the quorum in Phase 2.");
 			System.out.println("Error: didn't get enough responses from the quorum in Phase 2.");
 		}
 		return false;

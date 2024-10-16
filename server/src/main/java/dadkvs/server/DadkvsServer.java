@@ -1,28 +1,18 @@
 package dadkvs.server;
 
-import java.util.ArrayList;
-
 import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
-
-import dadkvs.DadkvsMain;
-import dadkvs.DadkvsFastPaxosServiceGrpc;
-import dadkvs.DadkvsFastPaxos;
-
-import dadkvs.util.GenericResponseCollector;
-import dadkvs.util.CollectorStreamObserver;
+import dadkvs.server.domain.ServerState;
 
 public class DadkvsServer {
 
-	static DadkvsServerState server_state;
+	static ServerState serverState;
 
 	/** Server host port. */
 	private static int port;
 
-	public static void main(String[] args) throws Exception {
+	public static void main(final String[] args) throws Exception {
 		final int kvsize = 1000;
 
 		System.out.println(DadkvsServer.class.getSimpleName());
@@ -40,19 +30,20 @@ public class DadkvsServer {
 			return;
 		}
 
-		int base_port = Integer.valueOf(args[0]);
-		int my_id = Integer.valueOf(args[1]);
+		final int basePort = Integer.valueOf(args[0]);
+		final int myId = Integer.valueOf(args[1]);
 
-		server_state = new DadkvsServerState(kvsize, base_port, my_id);
+		serverState = new ServerState(kvsize, basePort, myId);
 
-		port = base_port + my_id;
+		port = basePort + myId;
 
-		final BindableService service_impl = new DadkvsMainServiceImpl(server_state);
-		final BindableService console_impl = new DadkvsConsoleServiceImpl(server_state);
-		final BindableService paxos_impl = new DadkvsPaxosServiceImpl(server_state);
+		final BindableService serviceImpl = new MainServiceImpl(serverState);
+		final BindableService consoleImpl = new ConsoleServiceImpl(serverState);
+		final BindableService paxosImpl = new PaxosServiceImpl(serverState);
 
 		// Create a new server to listen on port.
-		Server server = ServerBuilder.forPort(port).addService(service_impl).addService(console_impl).addService(paxos_impl)
+		final Server server = ServerBuilder.forPort(port).addService(serviceImpl).addService(consoleImpl)
+				.addService(paxosImpl)
 				.build();
 		// Start the server.
 		server.start();

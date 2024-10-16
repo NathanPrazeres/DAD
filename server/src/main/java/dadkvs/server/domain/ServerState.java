@@ -10,24 +10,22 @@ public class ServerState {
 	public int nServers;
 	public int basePort;
 	public int myId;
-	int storeSize;
 	public boolean slowMode;
 	public boolean frozen;
 	public Object freezeLock;
+	public PaxosState paxosState;
+	public LogSystem logSystem;
 	
 	private KeyValueStore _store;
 	private final Queue _queue;
 	private final PaxosQueue _paxosQueue;
+	private int configuration;
 
-	public PaxosState paxosState;
-	public LogSystem logSystem;
-	public int configuration;
 
 	public ServerState(final int kv_size, final int port, final int myself) {
 		basePort = port;
 		nServers = 5;
 		myId = myself;
-		storeSize = kv_size;
 		_store = new KeyValueStore(kv_size);
 		slowMode = false;
 		frozen = false;
@@ -54,23 +52,23 @@ public class ServerState {
 		switch (debugMode) {
 			case 0:
 				// Normal mode
-				System.out.println("Debug mode 0: Normal mode.");
+				logSystem.writeLog("Debug mode 0: Normal mode.");
 				break;
 			case 1:
 				// Crash the _server
-				System.out.println("Debug mode 1: Crash the server.");
+				logSystem.writeLog("Debug mode 1: Crash the server.");
 				// just brute forcing for now
 				// FIXME: maybe close stubs
 				System.exit(0);
 				break;
 			case 2:
 				// Freeze the _server
-				System.out.println("Debug mode 2: Freeze the server.");
+				logSystem.writeLog("Debug mode 2: Freeze the server.");
 				frozen = true;
 				break;
 			case 3:
 				// Un-freeze the _server
-				System.out.println("Debug mode 3: Un-freeze the server.");
+				logSystem.writeLog("Debug mode 3: Un-freeze the server.");
 				synchronized (freezeLock) {
 					frozen = false;
 					freezeLock.notifyAll();
@@ -78,16 +76,16 @@ public class ServerState {
 				break;
 			case 4:
 				// Slow mode on (in_sert random delay between request processing)
-				System.out.println("Debug mode 4: Slow mode on");
+				logSystem.writeLog("Debug mode 4: Slow mode on");
 				slowMode = true;
 				break;
 			case 5:
 				// Slow mode off (remove random delay)
-				System.out.println("Debug mode 5: Slow mode off");
+				logSystem.writeLog("Debug mode 5: Slow mode off");
 				slowMode = false;
 				break;
 			default:
-				System.out.println("Unknown debug mode: " + debugMode);
+				logSystem.writeLog("Unknown debug mode: " + debugMode);
 				break;
 		}
 	}

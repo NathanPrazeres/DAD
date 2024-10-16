@@ -1,4 +1,4 @@
-package dadkvs.server.domain;
+package dadkvs.server.domain.paxos;
 
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -7,8 +7,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import dadkvs.DadkvsPaxos;
-import dadkvs.server.DadkvsServerState;
-import dadkvs.server.Sequencer;
+import dadkvs.server.domain.DadkvsServerState;
+import dadkvs.server.domain.Sequencer;
 import dadkvs.util.CollectorStreamObserver;
 import dadkvs.util.GenericResponseCollector;
 

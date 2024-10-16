@@ -1,4 +1,4 @@
-package dadkvs.server.domain;
+package dadkvs.server.domain.paxos;
 
 import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import dadkvs.DadkvsPaxos;
 import dadkvs.DadkvsPaxosServiceGrpc;
-import dadkvs.server.DadkvsServerState;
+import dadkvs.server.domain.DadkvsServerState;
 import dadkvs.util.CollectorStreamObserver;
 import dadkvs.util.GenericResponseCollector;
 

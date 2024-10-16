@@ -1,10 +1,10 @@
-package dadkvs.server.domain;
+package dadkvs.server.domain.paxos;
 
 import java.util.concurrent.ConcurrentHashMap;
 
 import dadkvs.DadkvsPaxos;
 import dadkvs.DadkvsPaxosServiceGrpc;
-import dadkvs.server.DadkvsServerState;
+import dadkvs.server.domain.DadkvsServerState;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 

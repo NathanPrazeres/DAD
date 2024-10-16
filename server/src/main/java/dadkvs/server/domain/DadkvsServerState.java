@@ -1,20 +1,22 @@
-package dadkvs.server;
+package dadkvs.server.domain;
 
-import dadkvs.server.domain.Acceptor;
-import dadkvs.server.domain.Learner;
-import dadkvs.server.domain.PaxosState;
+import dadkvs.server.LogSystem;
+import dadkvs.server.domain.paxos.Acceptor;
+import dadkvs.server.domain.paxos.Learner;
+import dadkvs.server.domain.paxos.PaxosQueue;
+import dadkvs.server.domain.paxos.PaxosState;
 
 public class DadkvsServerState {
-	boolean iAmLeader;
+	public boolean iAmLeader;
 	public int nServers;
-	int debugMode;
+	public int debugMode;
 	public int basePort;
 	public int myId;
 	int storeSize;
 	public KeyValueStore store;
-	boolean slowMode;
-	boolean frozen;
-	Object freezeLock;
+	public boolean slowMode;
+	public boolean frozen;
+	public Object freezeLock;
 
 	private final Queue _queue;
 	private final PaxosQueue _paxosQueue;

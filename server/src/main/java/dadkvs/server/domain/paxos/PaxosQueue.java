@@ -1,4 +1,4 @@
-package dadkvs.server;
+package dadkvs.server.domain.paxos;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Condition;

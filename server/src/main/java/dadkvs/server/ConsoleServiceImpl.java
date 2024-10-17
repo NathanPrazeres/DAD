@@ -39,7 +39,7 @@ public class ConsoleServiceImpl extends DadkvsConsoleServiceGrpc.DadkvsConsoleSe
 
 		final boolean responseValue = true;
 
-		_serverState.setDebugMode(request.getMode());
+		_serverState.setDebugMode(request.getMode(), request.getArg());
 
 		final DadkvsConsole.SetDebugReply response = DadkvsConsole.SetDebugReply.newBuilder()
 				.setAck(responseValue).build();

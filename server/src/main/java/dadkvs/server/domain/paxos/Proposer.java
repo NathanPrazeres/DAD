@@ -2,9 +2,13 @@ package dadkvs.server.domain.paxos;
 
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import dadkvs.DadkvsPaxos;
 import dadkvs.server.domain.ServerState;
@@ -16,11 +20,50 @@ public class Proposer extends Acceptor {
 	private final ConcurrentLinkedQueue<Integer> _requestQueue;
 	private int _priority;
 	private int _reqId;
+	private final Lock _waitPaxosLock = new ReentrantLock();
+	private final Condition _waitPaxosCondition = _waitPaxosLock.newCondition();
+	private final CopyOnWriteArrayList<Integer> _blockedPaxos = new CopyOnWriteArrayList<>();
+	
 
 	public Proposer() {
 		_requestQueue = new ConcurrentLinkedQueue<>();
 		_reqId = -1;
 		_sequencer = new Sequencer();
+	}
+
+	public void lockPaxos(int seqNum) {
+		_waitPaxosLock.lock();
+		try {
+			_blockedPaxos.add(seqNum);
+		} finally {
+			_waitPaxosLock.unlock();
+		}
+	}
+
+	public void unlockPaxos(int seqNum) {
+		_waitPaxosLock.lock();
+		try {
+			_blockedPaxos.remove(_blockedPaxos.indexOf(seqNum));
+			_waitPaxosCondition.signalAll();
+		} finally {
+			_waitPaxosLock.unlock();
+		}
+	}
+
+	private void waitBlockPaxos(int seqNum) {
+		_waitPaxosLock.lock();
+		try {
+			while (_blockedPaxos.contains(seqNum)) {
+				try {
+					_waitPaxosCondition.await();
+				} catch (final InterruptedException e) {
+					Thread.currentThread().interrupt();
+					throw new RuntimeException(e);
+				}
+			}
+		} finally {
+			_waitPaxosLock.unlock();
+		}
 	}
 
 	public void setServerState(final ServerState serverState) {
@@ -42,9 +85,11 @@ public class Proposer extends Acceptor {
 		_serverState.logSystem.writeLog("Starting [PAXOS(" + seqNum + ")]...");
 		try {
 			while (true) {
+				waitBlockPaxos(seqNum);
 				if (!runPhaseOne(seqNum)) {
 					continue;
 				}
+				waitBlockPaxos(seqNum);
 				if (!runPhaseTwo(seqNum)) {
 					continue;
 				}

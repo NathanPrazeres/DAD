@@ -133,6 +133,7 @@ public class DadkvsConsoleClient {
 						try {
 							mode = Integer.parseInt(parameter1);
 							replica = Integer.parseInt(parameter2);
+							int arg = Integer.parseInt(parameter3);
 							System.out.println("setting debug with mode " + mode + " on replica " + replica);
 
 							DadkvsConsole.SetDebugRequest.Builder setdebug_request = DadkvsConsole.SetDebugRequest.newBuilder();
@@ -142,6 +143,7 @@ public class DadkvsConsoleClient {
 							CollectorStreamObserver<DadkvsConsole.SetDebugReply> setdebug_observer = new CollectorStreamObserver<DadkvsConsole.SetDebugReply>(
 									setdebug_collector);
 							setdebug_request.setMode(mode);
+							setdebug_request.setArg(arg);
 							console_async_stubs[replica].setdebug(setdebug_request.build(), setdebug_observer);
 							setdebug_collector.waitForTarget(1);
 							if (setdebug_responses.size() >= 1) {

@@ -5,6 +5,7 @@ import dadkvs.server.domain.paxos.Acceptor;
 import dadkvs.server.domain.paxos.Learner;
 import dadkvs.server.domain.paxos.PaxosQueue;
 import dadkvs.server.domain.paxos.PaxosState;
+import dadkvs.server.domain.paxos.Proposer;
 
 public class ServerState {
 	public int nServers;
@@ -55,7 +56,7 @@ public class ServerState {
 		paxosState.setServerState(this);
 	}
 
-	public void setDebugMode(int debugMode) {
+	public void setDebugMode(int debugMode, int arg) {
 		switch (debugMode) {
 			case 0:
 				// Normal mode
@@ -90,6 +91,18 @@ public class ServerState {
 				// Slow mode off (remove random delay)
 				logSystem.writeLog("Debug mode 5: Slow mode off");
 				slowMode = false;
+				break;
+			case 6:
+				logSystem.writeLog("Debug mode 6: Block Paxos mode on");
+				if (paxosState instanceof Proposer) {
+					((Proposer) paxosState).lockPaxos(arg);
+				}
+				break;
+			case 7:
+				logSystem.writeLog("Debug mode 7: Block Paxos mode off");
+				if (paxosState instanceof Proposer) {
+					((Proposer) paxosState).unlockPaxos(arg);
+				}
 				break;
 			default:
 				logSystem.writeLog("Unknown debug mode: " + debugMode);

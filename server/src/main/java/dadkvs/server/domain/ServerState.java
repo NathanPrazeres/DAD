@@ -19,8 +19,14 @@ public class ServerState {
 	private KeyValueStore _store;
 	private final Queue _queue;
 	private final PaxosQueue _paxosQueue;
-	private int configuration;
-
+	
+	public int[] acceptors;
+	public int configuration;
+    public static final int[][] CONFIGS = {
+        {0, 1, 2},
+        {1, 2, 3},
+        {2, 3, 4}
+    };
 
 	public ServerState(final int kv_size, final int port, final int myself) {
 		basePort = port;
@@ -31,16 +37,17 @@ public class ServerState {
 		frozen = false;
 		freezeLock = new Object();
 		configuration = 0;
-
+		
 		_paxosQueue = new PaxosQueue();
-
+		
 		_queue = new Queue();
-
+		
 		if (myself > 2)
-			paxosState = new Learner();
+		paxosState = new Learner();
 		else
-			paxosState = new Acceptor();
-
+		paxosState = new Acceptor();
+		
+		acceptors = CONFIGS[configuration];
 		logSystem = new LogSystem(String.valueOf(port + myself), 1);
 		logSystem.writeLog("Started session");
 		logSystem.writeLog("I am " + paxosState.getClass().getSimpleName());
@@ -140,15 +147,22 @@ public class ServerState {
 	}
 
 	public boolean commit(TransactionRecord txrecord) {
+		if (txrecord.getPrepareKey() == 0) {
+			configuration++;
+			if (configuration > 2)
+				configuration = 0;
+			acceptors = CONFIGS[configuration];
+			paxosState.reconfigure(configuration);
+		}
 		boolean result = _store.commit(txrecord);
 		logSystem.writeLog(_store.toString());
 		return result;
 	}
-
+	
 	public VersionedValue read(int key) {
 		return _store.read(key);
 	}
-
+	
 	public void requestCancellation() {
 		_paxosQueue.requestCancellation();
 	}

@@ -31,4 +31,22 @@ public class Learner extends PaxosState {
 
 	public void demote() {
 	}
+
+	@Override
+	public void reconfigure(int newConfig) {
+		int[] config = ServerState.CONFIGS[newConfig];
+		boolean found = false;
+	
+		for (int id : config) {
+			if (id == _serverState.myId) {
+				found = true;
+				break;
+			}
+		}
+	
+		if (found) {
+			_serverState.logSystem.writeLog("Reconfiguring");
+			promote();
+		}
+	}
 }

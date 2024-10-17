@@ -111,6 +111,7 @@ public abstract class PaxosState {
 		}
 	}
 
+	public abstract void reconfigure(int newConfig);
 	public abstract void handleCommittx(int reqId);
 	public abstract void setServerState(ServerState serverState);
 	public abstract void promote();

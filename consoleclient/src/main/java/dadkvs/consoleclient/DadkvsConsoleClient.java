@@ -192,8 +192,11 @@ public class DadkvsConsoleClient {
 								System.out.println("error reading configuration");
 							}
 
-							if (configuration != old_config + 1 && configuration != 0)
-								System.out.println("configuration should be " + (old_config + 1));
+							if ((configuration != old_config + 1 && old_config != 2) || configuration > 2 || (old_config == 2 && configuration != 0))
+								if (old_config == 2)
+									System.out.println("configuration should be 0");
+								else
+									System.out.println("configuration should be " + (old_config + 1));
 							else {
 								sequence_number = sequence_number + 1;
 								int reqid = sequence_number * 100 + client_id;

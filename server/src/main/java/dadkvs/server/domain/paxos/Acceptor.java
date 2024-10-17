@@ -1,6 +1,7 @@
 package dadkvs.server.domain.paxos;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 import dadkvs.DadkvsPaxos;
 import dadkvs.DadkvsPaxosServiceGrpc;
@@ -149,8 +150,22 @@ public class Acceptor extends PaxosState {
 	}
 
 	public void terminateComms() {
+		_serverState.logSystem.writeLog("Initiating graceful shutdown of gRPC channels...");
+
 		for (int i = 0; i < nServers; i++) {
-			channels[i].shutdownNow();
+			channels[i].shutdown();
+		}
+		for (int i = 0; i < nServers; i++) {
+			try {
+				if (!channels[i].awaitTermination(30, TimeUnit.SECONDS)) {
+					_serverState.logSystem.writeLog("Forcing shutdown of gRPC channel: " + i);
+					channels[i].shutdownNow();
+				}
+			} catch (InterruptedException e) {
+				_serverState.logSystem.writeLog("Interrupted while waiting for channel shutdown: " + i);
+				channels[i].shutdownNow();
+				Thread.currentThread().interrupt();
+			}
 		}
 		_serverState.logSystem.writeLog("Closed Stubs for PAXOS communication.");
 	}

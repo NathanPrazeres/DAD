@@ -95,13 +95,13 @@ public class ServerState {
 			case 6:
 				logSystem.writeLog("Debug mode 6: Block Paxos mode on");
 				if (paxosState instanceof Proposer) {
-					((Proposer) paxosState).lockPaxos(arg);
+					((Proposer) paxosState).blockPaxos(arg);
 				}
 				break;
 			case 7:
 				logSystem.writeLog("Debug mode 7: Block Paxos mode off");
 				if (paxosState instanceof Proposer) {
-					((Proposer) paxosState).unlockPaxos(arg);
+					((Proposer) paxosState).unblockPaxos(arg);
 				}
 				break;
 			default:

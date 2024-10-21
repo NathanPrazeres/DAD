@@ -38,10 +38,10 @@ public class PaxosQueue {
 					}
 					seqNumber = _requestMap.get(reqid);
 				}
-				// if (_cancellationRequested) {
-				// 	seqNumber = -1;
-				// 	_cancellationRequested = false;
-				// }
+				if (_cancellationRequested) {
+					seqNumber = -1;
+					_cancellationRequested = false;
+				}
 			} finally {
 				_waitQueueLock.unlock();
 			}

@@ -34,9 +34,9 @@ public class Proposer extends Acceptor {
 
 	public void handleCommittx(final int reqId) {
 		serverState.logSystem.writeLog("Handling commit request with Request ID: " + reqId);
+		waitBlockPaxos();
 		_requestQueue.add(reqId);
 		final int seqNumber = _sequencer.getSequenceNumber();
-		waitBlockPaxos();
 
 		Paxos paxos = getPaxos(seqNumber);
 		paxos.seqNum.set(seqNumber);

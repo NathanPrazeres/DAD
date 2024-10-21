@@ -95,13 +95,13 @@ public class ServerState {
 			case 6:
 				logSystem.writeLog("Debug mode 6: Block Paxos mode on");
 				if (paxosState instanceof Proposer) {
-					((Proposer) paxosState).blockPaxos(arg);
+					((Proposer) paxosState).blockPaxos();
 				}
 				break;
 			case 7:
 				logSystem.writeLog("Debug mode 7: Block Paxos mode off");
 				if (paxosState instanceof Proposer) {
-					((Proposer) paxosState).unblockPaxos(arg);
+					((Proposer) paxosState).unblockPaxos();
 				}
 				break;
 			default:
@@ -129,8 +129,16 @@ public class ServerState {
 		paxosState.setServerState(this);
 	}
 
+	public boolean hasSequenceNumber(final int reqId) {
+		return _paxosQueue.hasSequenceNumber(reqId);
+	}
+
 	public int getSequenceNumber(final int reqId) {
 		return _paxosQueue.getSequenceNumber(reqId);
+	}
+
+	public int waitForSequenceNumber(final int reqId) {
+		return _paxosQueue.waitForSequenceNumber(reqId);
 	}
 
 	public void addRequest(final int reqId, final int seqNumber) {

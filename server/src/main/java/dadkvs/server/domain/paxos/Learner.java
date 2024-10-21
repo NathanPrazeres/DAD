@@ -5,7 +5,7 @@ import dadkvs.server.domain.ServerState;
 
 public class Learner extends PaxosState {
 	public void setServerState(final ServerState serverState) {
-		this._serverState = serverState;
+		this.serverState = serverState;
 	}
 
 	public DadkvsPaxos.PhaseOneReply handlePrepareRequest(final DadkvsPaxos.PhaseOneRequest request) {
@@ -21,7 +21,7 @@ public class Learner extends PaxosState {
 	}
 
 	public void promote() {
-		this._serverState.changePaxosState(new Acceptor());
+		this.serverState.changePaxosState(new Acceptor());
 	}
 
 	@Override
@@ -38,14 +38,14 @@ public class Learner extends PaxosState {
 		boolean found = false;
 	
 		for (int id : config) {
-			if (id == _serverState.myId) {
+			if (id == serverState.myId) {
 				found = true;
 				break;
 			}
 		}
 	
 		if (found) {
-			_serverState.logSystem.writeLog("Reconfiguring");
+			serverState.logSystem.writeLog("Reconfiguring");
 			promote();
 		}
 	}

@@ -1,9 +1,7 @@
 package dadkvs.server.domain.paxos;
 
 import java.util.ArrayList;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -17,11 +15,11 @@ import dadkvs.util.CollectorStreamObserver;
 import dadkvs.util.GenericResponseCollector;
 
 public class Proposer extends Acceptor {
-	public ConcurrentHashMap<Integer, Paxos> paxosHashMap = new ConcurrentHashMap<>();
+    private final Lock _waitPaxosLock = new ReentrantLock();
+	private final Condition _waitPaxosCondition = _waitPaxosLock.newCondition();
 	private final Sequencer _sequencer;
 	private final ConcurrentLinkedQueue<Integer> _requestQueue;
-	private final Lock _paxosLock = new ReentrantLock();
-    private final Condition _paxosCondition = _paxosLock.newCondition();
+	private boolean _blocked = false;
 
 	public Proposer() {
 		_requestQueue = new ConcurrentLinkedQueue<>();
@@ -29,16 +27,22 @@ public class Proposer extends Acceptor {
 	}
 
 	public void setServerState(final ServerState serverState) {
-		_serverState = serverState;
+		this.serverState = serverState;
 		initPaxosComms();
-		_serverState.requestCancellation();
+		serverState.requestCancellation();
 	}
 
 	public void handleCommittx(final int reqId) {
-		_serverState.logSystem.writeLog("Handling commit request with Request ID: " + reqId);
+		serverState.logSystem.writeLog("Handling commit request with Request ID: " + reqId);
 		_requestQueue.add(reqId);
 		final int seqNumber = _sequencer.getSequenceNumber();
-		paxosHashMap.put(seqNumber, new Paxos(seqNumber, reqId, _serverState, this));
+		waitBlockPaxos();
+
+		Paxos paxos = getPaxos(seqNumber);
+		paxos.seqNum.set(seqNumber);
+		concurrentHashMap.put(seqNumber, paxos);
+
+		runPaxos(seqNumber);
 	}
 
 	public void promote() {
@@ -47,7 +51,7 @@ public class Proposer extends Acceptor {
 
 	public void demote() {
 		terminateComms();
-		_serverState.changePaxosState(new Acceptor());
+		serverState.changePaxosState(new Acceptor());
 	}
 	
 	@Override
@@ -56,41 +60,247 @@ public class Proposer extends Acceptor {
 		boolean found = false;
 	
 		for (int id : config) {
-			if (id == _serverState.myId) {
+			if (id == serverState.myId) {
 				found = true;
 				break;
 			}
 		}
 	
 		if (!found) {
-			_serverState.logSystem.writeLog("Reconfiguring");
+			serverState.logSystem.writeLog("Reconfiguring");
 			super.demote();
 		}
 	}
 
-	public void blockPaxos(int seqNumber) {
-		waitForPaxosElement(seqNumber);
-		paxosHashMap.get(seqNumber).lockPaxos();
+	public void blockPaxos() {
+		_waitPaxosLock.lock();
+		try {
+			_blocked = true;
+		} finally {
+			_waitPaxosLock.unlock();
+		}
 	}
 
-	public void unblockPaxos(int seqNumber) {
-		waitForPaxosElement(seqNumber);
-		paxosHashMap.get(seqNumber).unlockPaxos();
+	public void unblockPaxos() {
+		_waitPaxosLock.lock();
+		try {
+			_blocked = false;
+			_waitPaxosCondition.signalAll();
+		} finally {
+			_waitPaxosLock.unlock();
+		}
 	}
 
-	private void waitForPaxosElement(int seqNumber) {
-        _paxosLock.lock();
-        try {
-            while (!paxosHashMap.containsKey(seqNumber)) {
-                try {
-                    _paxosCondition.await();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new RuntimeException(e);
-                }
-            }
-        } finally {
-            _paxosLock.unlock();
-        }
-    }
+	private void waitBlockPaxos() {
+		_waitPaxosLock.lock();
+		try {
+			while (_blocked) {
+				try {
+					_waitPaxosCondition.await();
+				} catch (final InterruptedException e) {
+					Thread.currentThread().interrupt();
+					throw new RuntimeException(e);
+				}
+			}
+		} finally {
+			_waitPaxosLock.unlock();
+		}
+	}
+	 public boolean runPaxos(final int seqNum) {
+		serverState.logSystem.writeLog("Starting [PAXOS(" + seqNum + ")]...");
+		try {
+			while (true) {
+				waitBlockPaxos();
+				if (!runPhaseOne(seqNum)) {
+					continue;
+				}
+				waitBlockPaxos();
+				if (!runPhaseTwo(seqNum)) {
+					continue;
+				}
+
+				serverState.logSystem.writeLog("Ending [PAXOS(" + seqNum + ")]...");
+				break;
+			}
+		} catch (final RuntimeException e) {
+			serverState.logSystem.writeLog("Exception occurred while running Paxos: " + e.getMessage());
+			return false;
+		}
+		return true;
+	}
+
+    private void setNewTimestamp(int seqNum) {
+		Paxos paxos = concurrentHashMap.get(seqNum);
+		paxos.timestamp.set(paxos.timestamp.get() + serverState.getNumberOfServers());
+	}
+
+    private boolean runPhaseOne(final int seqNum) {
+		serverState.logSystem
+				.writeLog("[PAXOS (" + seqNum + ")]\t\tSTARTING PHASE ONE.");
+
+		serverState.logSystem
+				.writeLog("[PAXOS (" + seqNum + ")]\t\tSENDING PREPARES.");
+
+		int timestamp;
+		if (concurrentHashMap.get(seqNum).timestamp.get() == -1) {
+			timestamp = serverState.myId();
+		} else {
+			timestamp = concurrentHashMap.get(seqNum).timestamp.get();
+		}
+
+		final DadkvsPaxos.PhaseOneRequest.Builder prepare = DadkvsPaxos.PhaseOneRequest.newBuilder()
+				.setPhase1Index(seqNum)
+				.setPhase1Config(serverState.getConfiguration())
+				.setPhase1Timestamp(timestamp);
+		final ArrayList<DadkvsPaxos.PhaseOneReply> promiseResponses = new ArrayList<>();
+		final GenericResponseCollector<DadkvsPaxos.PhaseOneReply> collector = new GenericResponseCollector<>(
+				promiseResponses,
+				serverState.acceptors.length);
+
+		final int nAcceptors = serverState.acceptors.length;
+		final CountDownLatch latch = new CountDownLatch(nAcceptors);
+		final ExecutorService executor = Executors.newFixedThreadPool(nAcceptors);
+
+		for (final int acceptor : serverState.acceptors) {
+			executor.submit(() -> {
+				try {
+					final CollectorStreamObserver<DadkvsPaxos.PhaseOneReply> observer = new CollectorStreamObserver<>(collector);
+					asyncStubs[acceptor].phaseone(prepare.build(), observer);
+				} catch (final RuntimeException e) {
+					serverState.logSystem.writeLog(
+							"Exception occurred while sending Prepare request to Acceptor " + acceptor + ": " + e.getMessage());
+				} finally {
+					latch.countDown();
+				}
+			});
+		}
+
+		try {
+			serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tWaiting for all threads to finish.");
+			latch.await();
+		} catch (final InterruptedException e) {
+			Thread.currentThread().interrupt();
+			e.printStackTrace();
+		} finally {
+			serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tAll threads done");
+			executor.shutdown();
+		}
+
+		final int responsesNeeded = serverState.getQuorum(serverState.acceptors.length);
+		try {
+			collector.waitForTarget(responsesNeeded);
+		} catch (final RuntimeException e) {
+			serverState.logSystem.writeLog("Exception occurred during Phase 1: " + e.getCause().getMessage());
+		}
+
+		if (promiseResponses.size() >= responsesNeeded) {
+			final boolean hasNaks = promiseResponses.stream().anyMatch(response -> !response.getPhase1Accepted());
+			if (!hasNaks) {
+				concurrentHashMap.get(seqNum).reqId.set(extractHighestProposedValue(promiseResponses, seqNum));
+				if (concurrentHashMap.get(seqNum).reqId.get() == -1) {
+					concurrentHashMap.get(seqNum).reqId.set(_requestQueue.poll());
+					serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tREMOVED " + concurrentHashMap.get(seqNum).reqId.get() + " FROM THE QUEUE");
+				}
+				serverState.logSystem
+						.writeLog("[PAXOS (" + seqNum + ")]\t\tFINISHED PHASE ONE WITH REQUEST ID " + concurrentHashMap.get(seqNum).reqId.get());
+				return true;
+			}
+			serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tSetting new timestamp");
+			setNewTimestamp(seqNum);
+		} else {
+			serverState.logSystem.writeLog("Error: didn't get enough responses from the quorum in Phase 1.");
+			System.out.println("Error: didn't get enough responses from the quorum in Phase 1.");
+		}
+		return false;
+	}
+
+	private boolean runPhaseTwo(final int seqNum) {
+		serverState.logSystem
+				.writeLog("[PAXOS (" + seqNum + ")]\t\tSTARTING PHASE TWO.");
+
+		serverState.logSystem
+				.writeLog("[PAXOS (" + seqNum + ")]\t\tSENDING ACCEPT - " + "Value: " + concurrentHashMap.get(seqNum).reqId.get() + " Priority: " + concurrentHashMap.get(seqNum).timestamp.get());
+
+		final DadkvsPaxos.PhaseTwoRequest.Builder accept = DadkvsPaxos.PhaseTwoRequest.newBuilder()
+				.setPhase2Config(serverState.getConfiguration())
+				.setPhase2Index(seqNum)
+				.setPhase2Value(concurrentHashMap.get(seqNum).reqId.get())
+				.setPhase2Timestamp(concurrentHashMap.get(seqNum).timestamp.get());
+
+		final ArrayList<DadkvsPaxos.PhaseTwoReply> acceptedResponses = new ArrayList<>();
+		final GenericResponseCollector<DadkvsPaxos.PhaseTwoReply> collector = new GenericResponseCollector<>(
+				acceptedResponses,
+				serverState.acceptors.length);
+
+		final int nAcceptors = serverState.acceptors.length;
+		final CountDownLatch latch = new CountDownLatch(nAcceptors);
+		final ExecutorService executor = Executors.newFixedThreadPool(nAcceptors);
+
+		for (final int acceptor : serverState.acceptors) {
+			executor.submit(() -> {
+				try {
+					final CollectorStreamObserver<DadkvsPaxos.PhaseTwoReply> observer = new CollectorStreamObserver<>(collector);
+					asyncStubs[acceptor].phasetwo(accept.build(), observer);
+				} catch (final RuntimeException e) {
+					serverState.logSystem.writeLog(
+							"Exception occurred while sending Phase 2 request to acceptor " + acceptor + ": " + e.getMessage());
+				} finally {
+					latch.countDown();
+				}
+			});
+		}
+
+		try {
+			serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tWaiting for all threads to finish.");
+			latch.await();
+		} catch (final InterruptedException e) {
+			Thread.currentThread().interrupt();
+			e.printStackTrace();
+		} finally {
+			serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tAll threads done");
+			executor.shutdown();
+		}
+
+		final int responsesNeeded = serverState.getQuorum(serverState.acceptors.length);
+		try {
+			collector.waitForTarget(responsesNeeded);
+		} catch (final RuntimeException e) {
+			serverState.logSystem.writeLog("Exception occurred during Phase 2: " + e.getCause().getMessage());
+		}
+
+		if (acceptedResponses.size() >= responsesNeeded) {
+			final boolean hasNaks = acceptedResponses.stream().anyMatch(response -> !response.getPhase2Accepted());
+			if (!hasNaks) {
+				serverState.logSystem
+						.writeLog("[PAXOS (" + seqNum + ")]\t\tFINISHED PHASE TWO.");
+				return true;
+			}
+			setNewTimestamp(seqNum);
+		} else {
+			serverState.logSystem.writeLog("Error: didn't get enough responses from the quorum in Phase 2.");
+			System.out.println("Error: didn't get enough responses from the quorum in Phase 2.");
+		}
+		return false;
+	}
+
+	public int extractHighestProposedValue(final ArrayList<DadkvsPaxos.PhaseOneReply> phase1Responses, final int seqNum) {
+		int value = -1;
+		int i = 0;
+		int highestTimestamp = -1;
+		for (final DadkvsPaxos.PhaseOneReply response : phase1Responses) {
+			if (response.getPhase1Value() != -1) {
+				if (response.getPhase1Timestamp() > highestTimestamp) {
+					highestTimestamp = response.getPhase1Timestamp();
+					value = response.getPhase1Value();
+				}
+			}
+			serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tResponse: " + i + " TimeStamp: "
+					+ response.getPhase1Timestamp() + " Value: " + response.getPhase1Value());
+			i++;
+		}
+
+		serverState.logSystem.writeLog(
+				"[PAXOS (" + seqNum + ")]\t\tHighest Proposed Value: " + value + " Highest Time Stamp: " + highestTimestamp);
+		return value;
+	}
 }

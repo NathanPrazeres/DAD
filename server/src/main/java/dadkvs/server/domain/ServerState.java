@@ -5,6 +5,7 @@ import dadkvs.server.domain.paxos.Acceptor;
 import dadkvs.server.domain.paxos.Learner;
 import dadkvs.server.domain.paxos.PaxosQueue;
 import dadkvs.server.domain.paxos.PaxosState;
+import dadkvs.server.domain.paxos.Proposer;
 
 public class ServerState {
 	public int nServers;
@@ -55,7 +56,7 @@ public class ServerState {
 		paxosState.setServerState(this);
 	}
 
-	public void setDebugMode(int debugMode) {
+	public void setDebugMode(int debugMode, int arg) {
 		switch (debugMode) {
 			case 0:
 				// Normal mode
@@ -91,6 +92,18 @@ public class ServerState {
 				logSystem.writeLog("Debug mode 5: Slow mode off");
 				slowMode = false;
 				break;
+			case 6:
+				logSystem.writeLog("Debug mode 6: Block Paxos mode on");
+				if (paxosState instanceof Proposer) {
+					((Proposer) paxosState).blockPaxos();
+				}
+				break;
+			case 7:
+				logSystem.writeLog("Debug mode 7: Block Paxos mode off");
+				if (paxosState instanceof Proposer) {
+					((Proposer) paxosState).unblockPaxos();
+				}
+				break;
 			default:
 				logSystem.writeLog("Unknown debug mode: " + debugMode);
 				break;
@@ -112,12 +125,21 @@ public class ServerState {
 	public <T extends PaxosState> void changePaxosState(final T newState) {
 		logSystem.writeLog("Changed paxos state from " + paxosState.getClass().getSimpleName() + " to "
 				+ newState.getClass().getSimpleName());
+		newState.setPaxosInstances(paxosState.getPaxosInstances());
+		newState.setServerState(this);
 		paxosState = newState;
-		paxosState.setServerState(this);
+	}
+
+	public boolean hasSequenceNumber(final int reqId) {
+		return _paxosQueue.hasSequenceNumber(reqId);
 	}
 
 	public int getSequenceNumber(final int reqId) {
 		return _paxosQueue.getSequenceNumber(reqId);
+	}
+
+	public int waitForSequenceNumber(final int reqId) {
+		return _paxosQueue.waitForSequenceNumber(reqId);
 	}
 
 	public void addRequest(final int reqId, final int seqNumber) {

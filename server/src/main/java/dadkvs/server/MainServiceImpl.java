@@ -89,7 +89,7 @@ public class MainServiceImpl extends DadkvsMainServiceGrpc.DadkvsMainServiceImpl
 					+ " wk " + writekey + " writeval " + writeval);
 
 			_serverState.logSystem.writeLog("Waiting for sequence number");
-			seqNumber = _serverState.getSequenceNumber(reqId);
+			seqNumber = _serverState.waitForSequenceNumber(reqId);
 		}
 		
 		_serverState.logSystem.writeLog("COMMITING: " + seqNumber);

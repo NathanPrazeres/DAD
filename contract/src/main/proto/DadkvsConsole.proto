@@ -8,7 +8,7 @@ message SetLeaderRequest { bool isleader = 1; }
 
 message SetLeaderReply { bool isleaderack = 1; }
 
-message SetDebugRequest { int32 mode = 1; }
+message SetDebugRequest { int32 mode = 1; int32 arg = 2; }
 
 message SetDebugReply { bool ack = 1; }
 

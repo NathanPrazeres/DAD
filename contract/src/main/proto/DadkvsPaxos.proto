@@ -44,8 +44,16 @@ message LearnReply {
   bool learnaccepted = 3;
 }
 
+message HighestPaxosInstanceRequest {
+}
+
+message HighestPaxosInstanceReply {
+  int32 highestPaxosInstance = 1;
+}
+
 service DadkvsPaxosService {
   rpc phaseone(PhaseOneRequest) returns (PhaseOneReply);
   rpc phasetwo(PhaseTwoRequest) returns (PhaseTwoReply);
   rpc learn(LearnRequest) returns (LearnReply);
+  rpc highestPaxosInstance(HighestPaxosInstanceRequest) returns (HighestPaxosInstanceReply);
 }

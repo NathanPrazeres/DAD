@@ -11,7 +11,18 @@ public class PaxosQueue {
 	private final Condition _waitQueueCondition = _waitQueueLock.newCondition();
 	private volatile boolean _cancellationRequested = false;
 
+	public boolean hasSequenceNumber(final int reqid) {
+		if (_requestMap.get(reqid) == null) {
+			return false;
+		}
+		return true;
+	}
+
 	public int getSequenceNumber(final int reqid) {
+		return _requestMap.get(reqid);
+	}
+
+	public int waitForSequenceNumber(final int reqid) {
 		Integer seqNumber = _requestMap.get(reqid);
 	
 		while (seqNumber == null) {

@@ -7,19 +7,41 @@ import dadkvs.DadkvsPaxosServiceGrpc;
 import io.grpc.stub.StreamObserver;
 
 public class PaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosServiceImplBase {
-
-	ServerState serverState;
+	static final int SERVER_DELAY = 3000; // 3 seconds
+	private ServerState _serverState;
 
 	public PaxosServiceImpl(final ServerState state) {
-		this.serverState = state;
+		this._serverState = state;
 
+	}
+
+	private void trySleep() {
+		try {
+			Thread.sleep((int) (SERVER_DELAY * (Math.random() + 0.5))); // Median is SERVER_DELAY
+		} catch (final InterruptedException e) {
+		}
+	}
+
+	public void checkConsoleRequest() {
+		synchronized (_serverState.freezeLock) {
+			while (_serverState.frozen) {
+				try {
+					_serverState.freezeLock.wait();
+				} catch (final InterruptedException e) {
+				}
+			}
+		}
+		if (_serverState.slowMode) {
+			trySleep();
+		}
 	}
 
 	@Override
 	public void phaseone(final DadkvsPaxos.PhaseOneRequest request,
 			final StreamObserver<DadkvsPaxos.PhaseOneReply> responseObserver) {
 		// for debug purposes
-		responseObserver.onNext(serverState.paxosState.handlePrepareRequest(request));
+		checkConsoleRequest();
+		responseObserver.onNext(_serverState.paxosState.handlePrepareRequest(request));
 		responseObserver.onCompleted();
 	}
 
@@ -27,7 +49,8 @@ public class PaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosServiceI
 	public void phasetwo(final DadkvsPaxos.PhaseTwoRequest request,
 			final StreamObserver<DadkvsPaxos.PhaseTwoReply> responseObserver) {
 		// for debug purposes
-		responseObserver.onNext(serverState.paxosState.handleAcceptRequest(request));
+		checkConsoleRequest();
+		responseObserver.onNext(_serverState.paxosState.handleAcceptRequest(request));
 		responseObserver.onCompleted();
 	}
 
@@ -35,11 +58,28 @@ public class PaxosServiceImpl extends DadkvsPaxosServiceGrpc.DadkvsPaxosServiceI
 	public void learn(final DadkvsPaxos.LearnRequest request,
 			final StreamObserver<DadkvsPaxos.LearnReply> responseObserver) {
 
+		checkConsoleRequest();
 		try {
-			serverState.logSystem.writeLog("Learn request received at server " + serverState.myId);
-			responseObserver.onNext(serverState.paxosState.handleLearnRequest(request));
+			_serverState.logSystem.writeLog("Learn request received at server " + _serverState.myId);
+			responseObserver.onNext(_serverState.paxosState.handleLearnRequest(request));
 		} catch (final Exception e) {
-			serverState.logSystem.writeLog("Error: " + e.getMessage());
+			_serverState.logSystem.writeLog("Error: " + e.getMessage());
+			e.printStackTrace();
+			System.exit(0);
+		}
+		responseObserver.onCompleted();
+	}
+
+	@Override
+	public void highestPaxosInstance(final DadkvsPaxos.HighestPaxosInstanceRequest request,
+			final StreamObserver<DadkvsPaxos.HighestPaxosInstanceReply> responseObserver) {
+
+		checkConsoleRequest();
+		try {
+			_serverState.logSystem.writeLog("Highest Paxos instance request received at server " + _serverState.myId);
+			responseObserver.onNext(_serverState.paxosState.handleHighestPaxosInstanceRequest(request));
+		} catch (final Exception e) {
+			_serverState.logSystem.writeLog("Error: " + e.getMessage());
 			e.printStackTrace();
 			System.exit(0);
 		}

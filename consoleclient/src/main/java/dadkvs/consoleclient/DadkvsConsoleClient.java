@@ -1,8 +1,5 @@
 package dadkvs.consoleclient;
 
-import java.util.Random;
-import java.util.concurrent.TimeUnit;
-
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -151,6 +148,7 @@ public class DadkvsConsoleClient {
 							} else
 								System.out.println("no reply received");
 						} catch (NumberFormatException e) {
+							System.out.println("Exception: " + e);
 							System.out.println("usage: debug mode replica");
 						}
 					} else {

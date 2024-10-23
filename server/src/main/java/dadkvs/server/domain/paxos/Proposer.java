@@ -37,14 +37,26 @@ public class Proposer extends Acceptor {
 		serverState.logSystem.writeLog("Global Highest sequence number: " + globalHighestPaxosInstance);
 		
 		if (globalHighestPaxosInstance > highestPaxosInstance) {
-			// TODO
+			updatePaxosInstance(highestPaxosInstance, globalHighestPaxosInstance);
+			highestPaxosInstance = globalHighestPaxosInstance;
 		}
-		
+
 		if (highestPaxosInstance != -1) {
 			_sequencer.seqNumber.set(highestPaxosInstance + 1);
 		}
 
 		serverState.requestCancellation();
+	}
+
+	private void updatePaxosInstance(int myHighestPaxosInstance, int globalHighestPaxosInstance) {
+		int min = myHighestPaxosInstance;
+		if (min == -1) {
+			min = 0;
+		}
+
+		for (int i = min; i <= globalHighestPaxosInstance; i++) {
+			runPhaseOne(i);
+		}
 	}
 
 	public void handleCommittx(final int reqId) {
@@ -157,10 +169,10 @@ public class Proposer extends Acceptor {
 				.writeLog("[PAXOS (" + seqNum + ")]\t\tSENDING PREPARES.");
 
 		int timestamp;
-		if (paxosInstancesHashMap.get(seqNum).timestamp.get() == -1) {
+		if (getPaxos(seqNum).timestamp.get() == -1) {
 			timestamp = serverState.myId();
 		} else {
-			timestamp = paxosInstancesHashMap.get(seqNum).timestamp.get();
+			timestamp = getPaxos(seqNum).timestamp.get();
 		}
 
 		final DadkvsPaxos.PhaseOneRequest.Builder prepare = DadkvsPaxos.PhaseOneRequest.newBuilder()

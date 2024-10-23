@@ -9,7 +9,6 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
 public class Acceptor extends PaxosState {
-	// (Index, Value)
 	private final int nServers = 5;
 	ManagedChannel[] channels;
 	public DadkvsPaxosServiceGrpc.DadkvsPaxosServiceStub[] asyncStubs;

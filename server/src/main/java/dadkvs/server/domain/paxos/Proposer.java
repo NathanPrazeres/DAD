@@ -30,6 +30,11 @@ public class Proposer extends Acceptor {
 		this.serverState = serverState;
 		initPaxosComms();
 		serverState.requestCancellation();
+		int highestPaxosInstance = getHighestPaxosInstance();
+		serverState.logSystem.writeLog("Highest sequence number: " + highestPaxosInstance);
+		if (highestPaxosInstance != -1) {
+			_sequencer.seqNumber.set(highestPaxosInstance + 1);
+		}
 	}
 
 	public void handleCommittx(final int reqId) {
@@ -40,7 +45,7 @@ public class Proposer extends Acceptor {
 
 		Paxos paxos = getPaxos(seqNumber);
 		paxos.seqNum.set(seqNumber);
-		concurrentHashMap.put(seqNumber, paxos);
+		paxosInstancesHashMap.put(seqNumber, paxos);
 
 		runPaxos(seqNumber);
 	}
@@ -130,7 +135,7 @@ public class Proposer extends Acceptor {
 	}
 
     private void setNewTimestamp(int seqNum) {
-		Paxos paxos = concurrentHashMap.get(seqNum);
+		Paxos paxos = paxosInstancesHashMap.get(seqNum);
 		paxos.timestamp.set(paxos.timestamp.get() + serverState.getNumberOfServers());
 	}
 
@@ -142,10 +147,10 @@ public class Proposer extends Acceptor {
 				.writeLog("[PAXOS (" + seqNum + ")]\t\tSENDING PREPARES.");
 
 		int timestamp;
-		if (concurrentHashMap.get(seqNum).timestamp.get() == -1) {
+		if (paxosInstancesHashMap.get(seqNum).timestamp.get() == -1) {
 			timestamp = serverState.myId();
 		} else {
-			timestamp = concurrentHashMap.get(seqNum).timestamp.get();
+			timestamp = paxosInstancesHashMap.get(seqNum).timestamp.get();
 		}
 
 		final DadkvsPaxos.PhaseOneRequest.Builder prepare = DadkvsPaxos.PhaseOneRequest.newBuilder()
@@ -196,13 +201,13 @@ public class Proposer extends Acceptor {
 		if (promiseResponses.size() >= responsesNeeded) {
 			final boolean hasNaks = promiseResponses.stream().anyMatch(response -> !response.getPhase1Accepted());
 			if (!hasNaks) {
-				concurrentHashMap.get(seqNum).reqId.set(extractHighestProposedValue(promiseResponses, seqNum));
-				if (concurrentHashMap.get(seqNum).reqId.get() == -1) {
-					concurrentHashMap.get(seqNum).reqId.set(_requestQueue.poll());
-					serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tREMOVED " + concurrentHashMap.get(seqNum).reqId.get() + " FROM THE QUEUE");
+				paxosInstancesHashMap.get(seqNum).reqId.set(extractHighestProposedValue(promiseResponses, seqNum));
+				if (paxosInstancesHashMap.get(seqNum).reqId.get() == -1) {
+					paxosInstancesHashMap.get(seqNum).reqId.set(_requestQueue.poll());
+					serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tREMOVED " + paxosInstancesHashMap.get(seqNum).reqId.get() + " FROM THE QUEUE");
 				}
 				serverState.logSystem
-						.writeLog("[PAXOS (" + seqNum + ")]\t\tFINISHED PHASE ONE WITH REQUEST ID " + concurrentHashMap.get(seqNum).reqId.get());
+						.writeLog("[PAXOS (" + seqNum + ")]\t\tFINISHED PHASE ONE WITH REQUEST ID " + paxosInstancesHashMap.get(seqNum).reqId.get());
 				return true;
 			}
 			serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tSetting new timestamp");
@@ -219,13 +224,13 @@ public class Proposer extends Acceptor {
 				.writeLog("[PAXOS (" + seqNum + ")]\t\tSTARTING PHASE TWO.");
 
 		serverState.logSystem
-				.writeLog("[PAXOS (" + seqNum + ")]\t\tSENDING ACCEPT - " + "Value: " + concurrentHashMap.get(seqNum).reqId.get() + " Priority: " + concurrentHashMap.get(seqNum).timestamp.get());
+				.writeLog("[PAXOS (" + seqNum + ")]\t\tSENDING ACCEPT - " + "Value: " + paxosInstancesHashMap.get(seqNum).reqId.get() + " Priority: " + paxosInstancesHashMap.get(seqNum).timestamp.get());
 
 		final DadkvsPaxos.PhaseTwoRequest.Builder accept = DadkvsPaxos.PhaseTwoRequest.newBuilder()
 				.setPhase2Config(serverState.getConfiguration())
 				.setPhase2Index(seqNum)
-				.setPhase2Value(concurrentHashMap.get(seqNum).reqId.get())
-				.setPhase2Timestamp(concurrentHashMap.get(seqNum).timestamp.get());
+				.setPhase2Value(paxosInstancesHashMap.get(seqNum).reqId.get())
+				.setPhase2Timestamp(paxosInstancesHashMap.get(seqNum).timestamp.get());
 
 		final ArrayList<DadkvsPaxos.PhaseTwoReply> acceptedResponses = new ArrayList<>();
 		final GenericResponseCollector<DadkvsPaxos.PhaseTwoReply> collector = new GenericResponseCollector<>(

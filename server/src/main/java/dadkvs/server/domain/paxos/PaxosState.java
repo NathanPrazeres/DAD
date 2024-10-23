@@ -1,6 +1,7 @@
 package dadkvs.server.domain.paxos;
 
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -14,18 +15,18 @@ import dadkvs.util.CollectorStreamObserver;
 import dadkvs.util.GenericResponseCollector;
 
 public abstract class PaxosState {
-	protected ConcurrentHashMap<Integer, Paxos> concurrentHashMap = new ConcurrentHashMap<>();
+	protected ConcurrentHashMap<Integer, Paxos> paxosInstancesHashMap = new ConcurrentHashMap<>();
 	protected ServerState serverState;
 
 	protected Paxos getPaxos(int seqNum) {
-		if (concurrentHashMap.get(seqNum) == null) {
+		if (paxosInstancesHashMap.get(seqNum) == null) {
 			serverState.logSystem.writeLog("[PAXOS (" + seqNum + ")]\t\tCreating new instance...");
 			Paxos paxos = new Paxos();
 			paxos.seqNum.set(seqNum);
-			concurrentHashMap.put(seqNum, paxos);
+			paxosInstancesHashMap.put(seqNum, paxos);
 			return paxos;
 		}
-		return concurrentHashMap.get(seqNum);
+		return paxosInstancesHashMap.get(seqNum);
 	}
 	
 	public DadkvsPaxos.LearnReply handleLearnRequest(final DadkvsPaxos.LearnRequest request) {
@@ -123,9 +124,25 @@ public abstract class PaxosState {
 		}
 	}
 
+	public void setPaxosInstances(ConcurrentHashMap<Integer, Paxos> paxosInstances) {
+		paxosInstancesHashMap = paxosInstances;
+	}
+
+	public ConcurrentHashMap<Integer, Paxos> getPaxosInstances() {
+		return paxosInstancesHashMap;
+	}
+
+	protected int getHighestPaxosInstance() {
+		return paxosInstancesHashMap.entrySet()
+			.stream()
+			.max(Map.Entry.comparingByKey())
+			.map(Map.Entry::getKey)
+			.orElse(-1);
+	}
+
+	public abstract void setServerState(ServerState serverState);
 	public abstract void reconfigure(int newConfig);
 	public abstract void handleCommittx(int reqId);
-	public abstract void setServerState(ServerState serverState);
 	public abstract void promote();
 	public abstract void demote();
 	public abstract DadkvsPaxos.PhaseTwoReply handleAcceptRequest(DadkvsPaxos.PhaseTwoRequest request);

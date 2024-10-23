@@ -125,8 +125,9 @@ public class ServerState {
 	public <T extends PaxosState> void changePaxosState(final T newState) {
 		logSystem.writeLog("Changed paxos state from " + paxosState.getClass().getSimpleName() + " to "
 				+ newState.getClass().getSimpleName());
+		newState.setPaxosInstances(paxosState.getPaxosInstances());
+		newState.setServerState(this);
 		paxosState = newState;
-		paxosState.setServerState(this);
 	}
 
 	public boolean hasSequenceNumber(final int reqId) {

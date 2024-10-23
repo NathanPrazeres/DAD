@@ -132,6 +132,12 @@ public abstract class PaxosState {
 		return paxosInstancesHashMap;
 	}
 
+	public DadkvsPaxos.HighestPaxosInstanceReply handleHighestPaxosInstanceRequest(final DadkvsPaxos.HighestPaxosInstanceRequest request) {
+		return DadkvsPaxos.HighestPaxosInstanceReply.newBuilder()
+		.setHighestPaxosInstance(getHighestPaxosInstance())
+		.build();
+	}
+
 	protected int getHighestPaxosInstance() {
 		return paxosInstancesHashMap.entrySet()
 			.stream()

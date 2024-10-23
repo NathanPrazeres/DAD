@@ -29,12 +29,22 @@ public class Proposer extends Acceptor {
 	public void setServerState(final ServerState serverState) {
 		this.serverState = serverState;
 		initPaxosComms();
-		serverState.requestCancellation();
+		
 		int highestPaxosInstance = getHighestPaxosInstance();
 		serverState.logSystem.writeLog("Highest sequence number: " + highestPaxosInstance);
+		
+		int globalHighestPaxosInstance = getGlobalHighestPaxosInstance();
+		serverState.logSystem.writeLog("Global Highest sequence number: " + globalHighestPaxosInstance);
+		
+		if (globalHighestPaxosInstance > highestPaxosInstance) {
+			// TODO
+		}
+		
 		if (highestPaxosInstance != -1) {
 			_sequencer.seqNumber.set(highestPaxosInstance + 1);
 		}
+
+		serverState.requestCancellation();
 	}
 
 	public void handleCommittx(final int reqId) {
@@ -288,7 +298,7 @@ public class Proposer extends Acceptor {
 		return false;
 	}
 
-	public int extractHighestProposedValue(final ArrayList<DadkvsPaxos.PhaseOneReply> phase1Responses, final int seqNum) {
+	private int extractHighestProposedValue(final ArrayList<DadkvsPaxos.PhaseOneReply> phase1Responses, final int seqNum) {
 		int value = -1;
 		int i = 0;
 		int highestTimestamp = -1;
@@ -307,5 +317,60 @@ public class Proposer extends Acceptor {
 		serverState.logSystem.writeLog(
 				"[PAXOS (" + seqNum + ")]\t\tHighest Proposed Value: " + value + " Highest Time Stamp: " + highestTimestamp);
 		return value;
+	}
+
+	private int getGlobalHighestPaxosInstance() {
+		final DadkvsPaxos.HighestPaxosInstanceRequest.Builder accept = DadkvsPaxos.HighestPaxosInstanceRequest.newBuilder();
+
+		final ArrayList<DadkvsPaxos.HighestPaxosInstanceReply> acceptedResponses = new ArrayList<>();
+		final GenericResponseCollector<DadkvsPaxos.HighestPaxosInstanceReply> collector = new GenericResponseCollector<>(
+				acceptedResponses,
+				serverState.acceptors.length);
+
+		final int nAcceptors = serverState.acceptors.length;
+		final CountDownLatch latch = new CountDownLatch(nAcceptors);
+		final ExecutorService executor = Executors.newFixedThreadPool(nAcceptors);
+
+		for (final int acceptor : serverState.acceptors) {
+			executor.submit(() -> {
+				try {
+					final CollectorStreamObserver<DadkvsPaxos.HighestPaxosInstanceReply> observer = new CollectorStreamObserver<>(collector);
+					asyncStubs[acceptor].highestPaxosInstance(accept.build(), observer);
+				} catch (final RuntimeException e) {
+					serverState.logSystem.writeLog(
+							"Exception occurred while sending Phase 2 request to acceptor " + acceptor + ": " + e.getMessage());
+				} finally {
+					latch.countDown();
+				}
+			});
+		}
+
+		try {
+			serverState.logSystem.writeLog("Waiting for all threads to finish.");
+			latch.await();
+		} catch (final InterruptedException e) {
+			Thread.currentThread().interrupt();
+			e.printStackTrace();
+		} finally {
+			serverState.logSystem.writeLog("All threads done");
+			executor.shutdown();
+		}
+
+		final int responsesNeeded = serverState.getQuorum(serverState.acceptors.length);
+		try {
+			collector.waitForTarget(responsesNeeded);
+		} catch (final RuntimeException e) {
+			serverState.logSystem.writeLog("Exception occurred during Phase 2: " + e.getCause().getMessage());
+		}
+
+		int highestPaxosInstance = -1;
+
+		if (acceptedResponses.size() >= responsesNeeded) {
+			highestPaxosInstance = acceptedResponses.stream()
+				.mapToInt(DadkvsPaxos.HighestPaxosInstanceReply::getHighestPaxosInstance)
+				.max()
+				.orElse(-1);
+		}
+		return highestPaxosInstance;
 	}
 }

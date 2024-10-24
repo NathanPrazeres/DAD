@@ -1,8 +1,6 @@
 # DAD2425
 Project course for DAD 2024-25
 
-This repository holds the base code required to implement the project. Students are free to improve on the following code.
-
 # Requirements
 
 The project requires the following packages:
@@ -18,10 +16,8 @@ To compile the project, students must run the command
 
 ## Using Docker
 
-The command `docker compose up` will open 5 servers. Then in another session `./run-client.sh` will open
-the client, and `./run-consoleclient.sh` will open the console client. These last two commands will only work when at least on server is on.
-
-These commands might not work outside of linux.
+The command `docker compose up` will open 5 servers. Then in another session `bash ./run-client.sh` will open
+the client, and `bash ./run-consoleclient.sh` will open the console client. These last two commands will only work when at least on server is on.
 
 `docker exec -it dad bash` will open a session inside the container, there any of the commands bellow will work as usual.
 
@@ -42,7 +38,6 @@ The project is composed of three main components:
 - Servers
 - Clients
 - ConsoleClient
-
 
 ## Servers
 

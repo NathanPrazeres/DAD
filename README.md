@@ -16,6 +16,15 @@ The project requires the following packages:
 To compile the project, students must run the command
 `mvn clean install` in the root directory
 
+## Using Docker
+
+The command `docker compose up` will open 5 servers. Then in another session `./run-client.sh` will open
+the client, and `./run-consoleclient.sh` will open the console client. These last two commands will only work when at least on server is on.
+
+These commands might not work outside of linux.
+
+`docker exec -it dad bash` will open a session inside the container, there any of the commands bellow will work as usual.
+
 ## **WARNING - Compilation Environment**
 
 The project requires different `pom.xml` for the *contract* module depending on the CPU architecture/OS distribution. 
